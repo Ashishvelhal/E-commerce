@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+mongo-mem-*
+.rasin_arts_studio_data/
+uploads/temp/
+*.log

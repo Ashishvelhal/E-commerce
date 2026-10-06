@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scoped exclusively to the Admin Section */
+.admin-scope,
+.admin-scope *,
+.admin-scope button,
+.admin-scope input,
+.admin-scope select,
+.admin-scope textarea,
+.admin-scope h1,
+.admin-scope h2,
+.admin-scope h3,
+.admin-scope h4,
+.admin-scope p,
+.admin-scope span,
+.admin-scope table,
+.admin-scope th,
+.admin-scope td {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+@layer base {
+  body {
+    background-color: #FAF8F5;
+    color: #2E2218;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Warm resin-art scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #FAF8F5; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #D97006, #E11D48);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #F59010; }
+
+  /* Smooth selection highlight */
+  ::selection { background: rgba(245,144,16,0.18); color: #78350F; }
+}
+
+/* ────────────────────────────────────────────
+   RESIN ARTS  –  Global Utility Classes
+───────────────────────────────────────────── */
+
+/* Iridescent warm-glass panel */
+.glass-panel {
+  background: rgba(250, 248, 245, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(245,144,16,0.15);
+}
+
+/* Light art-card glass */
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(245,144,16,0.10);
+}
+
+/* Warm amber glow — primary CTA */
+.glow-brand {
+  box-shadow: 0 0 30px -6px rgba(245,144,16,0.45), 0 0 60px -15px rgba(225,29,72,0.25);
+}
+
+/* Soft gold ring on hover */
+.glow-gold {
+  box-shadow: 0 0 20px -4px rgba(245,144,16,0.35);
+}
+
+/* Amethyst / plum glow */
+.glow-plum {
+  box-shadow: 0 0 25px -5px rgba(124,58,237,0.40);
+}
+
+/* Rose-gold glow */
+.glow-rose {
+  box-shadow: 0 0 25px -5px rgba(244,63,94,0.40);
+}
+
+/* Cyan accent glow */
+.glow-cyber {
+  box-shadow: 0 0 25px -5px rgba(6,182,212,0.40);
+}
+
+/* Iridescent gradient text */
+.text-resin {
+  background: linear-gradient(135deg, #F59010 0%, #E11D48 40%, #A78BFA 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Shimmer animation for badge */
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #FDC24B 0%,
+    #FBBF24 20%,
+    #FFF9EB 40%,
+    #FBBF24 60%,
+    #FDC24B 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2.5s linear infinite;
+}
+
+/* Resin organic blob shape */
+.resin-blob {
+  animation: pour 9s ease-in-out infinite;
+}
+
+/* Art product card shadow */
+.art-card-shadow {
+  box-shadow: 0 8px 30px rgba(45,34,28,0.06), 0 1px 2px rgba(45,34,28,0.03), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* Ambient radial art glow on sections */
+.art-ambient {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,144,16,0.04) 0%, transparent 70%);
+}
+
+/* Resin ribbon divider */
+.resin-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #F59010, #E11D48, #7C3AED, transparent);
+  opacity: 0.4;
+}
+
+/* 3D canvas wrapper */
+.canvas-3d-wrapper { touch-action: none; }
+
+/* Floating decorative orbs */
+.orb-gold {
+  background: radial-gradient(circle at 40% 40%, #F59010, #D97006 60%, transparent 80%);
+  filter: blur(40px);
+  opacity: 0.25;
+  border-radius: 50%;
+}
+.orb-rose {
+  background: radial-gradient(circle at 40% 40%, #E11D48, #FB7185 60%, transparent 80%);
+  filter: blur(50px);
+  opacity: 0.18;
+  border-radius: 50%;
+}
+.orb-plum {
+  background: radial-gradient(circle at 40% 40%, #7C3AED, #A78BFA 60%, transparent 80%);
+  filter: blur(45px);
+  opacity: 0.15;
+  border-radius: 50%;
+}
