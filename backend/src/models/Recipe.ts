@@ -120,6 +120,5 @@ const RecipeSchema = new Schema<IRecipe>(
 );
 
 RecipeSchema.index({ productType: 1 });
-RecipeSchema.index({ slug: 1 });
 
 export const Recipe = mongoose.model<IRecipe>('Recipe', RecipeSchema);
