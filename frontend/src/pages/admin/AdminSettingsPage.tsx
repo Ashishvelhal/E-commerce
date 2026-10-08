@@ -220,6 +220,18 @@ export const AdminSettingsPage: React.FC = () => {
     }
   }, [settings]);
 
+  type SettingsTabId = 'brand' | 'customizer' | 'whatsapp' | 'shipping' | 'email' | 'security' | 'all';
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('brand');
+
+  const SETTINGS_TABS: { id: SettingsTabId; label: string; sub: string; icon: any; countBadge?: string }[] = [
+    { id: 'brand', label: 'Brand & Visuals', sub: 'Logo, Tagline, Navbar & Themes', icon: Palette },
+    { id: 'customizer', label: '3D Co-Creator Studio', sub: '3D Models & Product Catalog', icon: Sparkles, countBadge: customizerEnabled ? 'Live' : 'Off' },
+    { id: 'whatsapp', label: 'WhatsApp Direct Orders', sub: '1-Click Checkout & Message', icon: MessageCircle, countBadge: whatsappCheckoutEnabled ? 'Live' : 'Off' },
+    { id: 'shipping', label: 'Shipping, Tax & Studio', sub: 'Free Shipping, GSTIN & Address', icon: Truck },
+    { id: 'email', label: 'Mail & Communications', sub: 'Universal Email, Mailboxes & SMTP', icon: Mail, countBadge: customMailboxes.length > 0 ? `${customMailboxes.length}` : undefined },
+    { id: 'security', label: 'Admin Security', sub: 'Account Name & Password', icon: ShieldCheck },
+  ];
+
   const handleToggleCustomizer = async () => {
     setIsTogglingCustomizer(true);
     const newState = !customizerEnabled;
@@ -364,10 +376,128 @@ export const AdminSettingsPage: React.FC = () => {
         subtitle="Manage 3D Customizer feature access, store rules, and administrator credentials"
       />
 
-      <div className="p-3 xs:p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-4xl mx-auto">
-        <form onSubmit={handleSaveAll} className="space-y-4 sm:space-y-6">
-          {/* 1. 🎨 3D LIVE CUSTOMIZER FEATURE TOGGLE (ADMIN CONTROL) */}
-          <div className="p-4 sm:p-6 rounded-3xl bg-art-900/90 border border-art-800 space-y-4 shadow-xl relative overflow-hidden">
+      <div className="p-3 xs:p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        {/* Mobile Horizontal Sub-Navigation Tabs */}
+        <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === 'all'
+                ? 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-md'
+                : 'bg-white border border-art-800 text-art-400 hover:text-art-300'
+            }`}
+          >
+            📋 All Settings
+          </button>
+          {SETTINGS_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isSel = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  isSel
+                    ? 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-md'
+                    : 'bg-white border border-art-800 text-art-400 hover:text-art-300'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleSaveAll} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Settings Sub-Sidebar (Sticky) */}
+          <div className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-4 sticky top-24">
+            <div className="p-3 bg-white rounded-2xl border border-art-800 shadow-md space-y-1">
+              <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-art-500 font-mono">
+                Store Settings
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('all')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left ${
+                  activeTab === 'all'
+                    ? 'bg-art-900 text-brand-700 border border-brand-300 shadow-sm'
+                    : 'text-art-400 hover:text-art-300 hover:bg-art-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sliders className="w-4 h-4 text-brand-600" />
+                  <div>
+                    <div className="font-bold">All Settings</div>
+                    <div className="text-[10px] text-art-500 font-normal">View everything in one page</div>
+                  </div>
+                </div>
+              </button>
+              <div className="h-px bg-art-800 my-1" />
+              {SETTINGS_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isSel = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left ${
+                      isSel
+                        ? 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-md glow-brand font-bold'
+                        : 'text-art-400 hover:text-art-300 hover:bg-art-900 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <div className="min-w-0 truncate">
+                        <div className="truncate">{tab.label}</div>
+                        <div className={`text-[10px] truncate ${isSel ? 'text-white/80' : 'text-art-500'}`}>
+                          {tab.sub}
+                        </div>
+                      </div>
+                    </div>
+                    {tab.countBadge && (
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                          isSel ? 'bg-white/20 text-white' : 'bg-art-800 text-art-400'
+                        }`}
+                      >
+                        {tab.countBadge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sticky Save Card */}
+            <div className="p-4 rounded-2xl bg-white border border-brand-200 shadow-md space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-700">
+                <CheckCircle2 className="w-4 h-4 text-brand-600" />
+                <span>Save Store Configurations</span>
+              </div>
+              <p className="text-[11px] text-art-500 leading-relaxed">
+                Applies changes across branding, WhatsApp direct checkout, customizer, email routing, and credentials.
+              </p>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 via-brand-500 to-rose-600 hover:from-brand-500 hover:to-rose-500 disabled:opacity-50 text-white text-xs font-bold shadow-md glow-brand flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isSaving ? 'Saving...' : 'Save All Settings'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Main Content Area */}
+          <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+            {/* 1. 🎨 3D LIVE CUSTOMIZER FEATURE TOGGLE (ADMIN CONTROL) */}
+            {(activeTab === 'all' || activeTab === 'customizer') && (
+            <div className="p-4 sm:p-6 rounded-3xl bg-art-900/90 border border-art-800 space-y-4 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-brand-500/10 via-rose-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -591,8 +721,10 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* 2. 📱 WHATSAPP 1-CLICK DIRECT ORDERING & REDIRECTION SETTINGS */}
+          {(activeTab === 'all' || activeTab === 'whatsapp') && (
           <div className="p-4 sm:p-6 rounded-3xl bg-art-900/90 border border-art-800 space-y-4 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -689,8 +821,11 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* 3. 🎨 STOREFRONT BRAND NAME, TAGLINE & LOGO CUSTOMIZER */}
+          {(activeTab === 'all' || activeTab === 'brand') && (
+          <>
           <div className="p-4 sm:p-6 rounded-2xl bg-white border border-art-800 space-y-6 shadow-xl relative overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-art-800">
               <div>
@@ -990,8 +1125,11 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* 5. Studio Email & Communication Command Center */}
+          {(activeTab === 'all' || activeTab === 'email') && (
           <div className="p-4 sm:p-6 rounded-2xl bg-white border border-stone-200 space-y-6 shadow-xl relative overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-200">
               <div>
@@ -1795,8 +1933,10 @@ export const AdminSettingsPage: React.FC = () => {
               )}
             </div>
           </div>
+          )}
 
           {/* 6. Administrator Account & Credentials */}
+          {(activeTab === 'all' || activeTab === 'security') && (
           <div className="p-4 sm:p-6 rounded-2xl bg-white border border-stone-200 space-y-4 shadow-xl">
             <h2 className="text-sm font-bold text-art-400 uppercase tracking-wider flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-brand-600" />
@@ -1846,8 +1986,10 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* 3. Store Logistics & Business Rules */}
+          {(activeTab === 'all' || activeTab === 'shipping') && (
           <div className="p-4 sm:p-6 rounded-2xl bg-white border border-art-800 space-y-4 shadow-xl">
             <h2 className="text-sm font-bold text-art-400 uppercase tracking-wider flex items-center gap-2">
               <Settings className="w-4 h-4 text-plum-600" />
@@ -1950,20 +2092,22 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           <div className="flex justify-end pt-2">
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-art-300 text-xs font-bold shadow-lg glow-brand flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-brand-600 via-brand-500 to-rose-600 hover:from-brand-500 hover:to-rose-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg glow-brand flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSaving ? 'Updating Settings...' : 'Save All Settings'}</span>
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
+  </div>
   );
 };
 
