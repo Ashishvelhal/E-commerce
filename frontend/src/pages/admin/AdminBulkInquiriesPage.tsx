@@ -18,6 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  LayoutGrid,
+  LayoutList,
 } from 'lucide-react';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
 import { BulkInquiry } from '../../types';
@@ -43,6 +45,7 @@ export const AdminBulkInquiriesPage: React.FC = () => {
   const [inquiries, setInquiries] = useState<BulkInquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [statusFilter, setStatusFilter] = useState('All');
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
@@ -220,17 +223,47 @@ Best regards,
             )}
           </div>
 
-          {/* Search Input */}
-          <form onSubmit={handleSearchSubmit} className="relative w-full md:w-72 shrink-0">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-art-600" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search client, company, phone..."
-              className="w-full bg-art-950 border border-art-800 rounded-xl pl-10 pr-4 py-2 text-xs text-art-200 placeholder-art-600 focus:outline-none focus:border-brand-500"
-            />
-          </form>
+          {/* Search Input & View Toggle */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* View Mode Toggle Switch */}
+            <div className="flex items-center gap-1 p-1 bg-art-950 border border-art-800 rounded-xl shadow-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'cards'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'list'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                }`}
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>List</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-64 shrink-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-art-600" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search client, company, phone..."
+                className="w-full bg-art-950 border border-art-800 rounded-xl pl-10 pr-4 py-2 text-xs text-art-200 placeholder-art-600 focus:outline-none focus:border-brand-500"
+              />
+            </form>
+          </div>
         </div>
 
         {/* Inquiries List */}
@@ -249,7 +282,10 @@ Best regards,
           </div>
         ) : (
           <div className="space-y-4">
-            {inquiries.map((inq) => (
+            {viewMode === 'cards' ? (
+              /* CARDS VIEW */
+              <div className="space-y-4">
+                {inquiries.map((inq) => (
               <div
                 key={inq._id}
                 className="p-5 sm:p-6 rounded-3xl bg-white border border-art-800 shadow-sm space-y-4 hover:border-art-700 transition-all"
@@ -425,6 +461,94 @@ Best regards,
                 )}
               </div>
             ))}
+          </div>
+            ) : (
+              /* LIST TABLE VIEW */
+              <div className="bg-white border border-art-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                      <tr className="border-b border-art-800 bg-art-950/60 text-[11px] font-bold text-art-500 uppercase tracking-wider">
+                        <th className="py-4 px-6">Company / Client</th>
+                        <th className="py-4 px-4">Product & Volume</th>
+                        <th className="py-4 px-4">Contact Info</th>
+                        <th className="py-4 px-4">Target Date & Budget</th>
+                        <th className="py-4 px-4">Pipeline Status</th>
+                        <th className="py-4 px-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-art-800 text-xs">
+                      {inquiries.map((inq) => (
+                        <tr key={inq._id} className="hover:bg-art-950/50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="font-bold text-art-300 text-sm">{inq.companyOrEvent}</div>
+                            <div className="text-xs text-art-500 font-medium">{inq.name}</div>
+                            <div className="text-[10px] text-brand-500 font-semibold">{inq.eventType}</div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-art-300">{inq.productInterest}</div>
+                            <div className="font-mono font-black text-brand-500">{inq.estimatedQuantity} Units</div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="font-mono text-art-300 text-xs flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-emerald-600" />
+                              <span>{inq.phone}</span>
+                            </div>
+                            <div className="text-[11px] text-art-500 truncate max-w-[180px]">{inq.email}</div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="text-art-300 font-semibold">
+                              {inq.targetDate ? formatDate(inq.targetDate, 'short') : 'Flexible'}
+                            </div>
+                            <div className="text-[10px] text-art-500">{inq.budgetRange || 'Standard'}</div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <select
+                              value={inq.status}
+                              onChange={(e) => handleStatusChange(inq._id, e.target.value)}
+                              className="bg-art-950 border border-art-700 rounded-xl px-2.5 py-1 text-xs text-art-300 font-semibold focus:outline-none focus:border-brand-500"
+                            >
+                              <option value="New">New</option>
+                              <option value="Contacted">Contacted</option>
+                              <option value="Quoted">Quoted</option>
+                              <option value="In Production">In Production</option>
+                              <option value="Completed">Completed</option>
+                              <option value="Declined">Declined</option>
+                            </select>
+                          </td>
+
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSendWhatsAppQuote(inq)}
+                                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1 shadow-xs"
+                                title="Send WhatsApp Quote"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">WhatsApp</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(inq._id)}
+                                className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
+                                title="Delete Inquiry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, Edit, Loader2, Search, Phone, MapPin, User, Package, Plus, ChevronLeft, ChevronRight, FileText, PackageCheck } from 'lucide-react';
+import { Truck, Edit, Loader2, Search, Phone, MapPin, User, Package, Plus, ChevronLeft, ChevronRight, FileText, PackageCheck, LayoutGrid, LayoutList } from 'lucide-react';
 import { Order } from '../../types';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
 import { OrderStatusModal } from '../../components/admin/OrderStatusModal';
@@ -14,6 +14,7 @@ export const AdminOrdersPage: React.FC = () => {
   const [orders,        setOrders]        = useState<Order[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState('');
+  const [viewMode,      setViewMode]      = useState<'list' | 'grid'>('list');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
   const [selectedPackingOrder, setSelectedPackingOrder] = useState<Order | null>(null);
@@ -78,9 +79,37 @@ export const AdminOrdersPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-            <span className="text-xs text-art-500 font-medium">
-              Total Orders: <span className="font-bold text-art-300">{totalOrders}</span>
+          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 flex-wrap">
+            {/* View Mode Toggle Switch */}
+            <div className="flex items-center gap-1 p-1 bg-white border border-art-800 rounded-xl shadow-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'list'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                }`}
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'grid'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
+              </button>
+            </div>
+
+            <span className="text-xs text-art-500 font-medium hidden md:inline">
+              Total: <span className="font-bold text-art-300">{totalOrders}</span>
             </span>
             <button
               onClick={() => setIsCreateModal(true)}
@@ -107,123 +136,238 @@ export const AdminOrdersPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            <div className="space-y-3 sm:space-y-4">
-              {filtered.map((order) => (
-                <div
-                  key={order._id}
-                  className="p-4 sm:p-5 rounded-2xl bg-white border border-art-800 shadow-sm space-y-3 sm:space-y-4"
-                >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-mono text-art-500">
-                          #{order._id.slice(-10).toUpperCase()}
-                        </span>
+            {viewMode === 'grid' ? (
+              /* CARDS GRID VIEW */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filtered.map((order) => (
+                  <div
+                    key={order._id}
+                    className="p-5 rounded-3xl bg-white border border-art-800 shadow-sm hover:border-brand-300 transition-all flex flex-col justify-between space-y-4"
+                  >
+                    {/* Header: ID + Status + Placed Time */}
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-mono font-bold text-art-400">
+                              #{order._id.slice(-8).toUpperCase()}
+                            </span>
+                            {order.trackingNumber && (
+                              <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                                {order.trackingNumber}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-art-500 mt-0.5">
+                            {formatDate(order.createdAt, 'short')}
+                          </div>
+                        </div>
                         <StatusBadge type="order" status={order.status} size="sm" />
-                        {order.trackingNumber && (
-                          <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-500/30">
-                            {order.trackingNumber}
-                          </span>
-                        )}
                       </div>
-                      <div className="text-[11px] text-art-600">
-                        Placed on {formatDate(order.createdAt, 'full')}
+
+                      {/* Customer & Address Details */}
+                      <div className="p-3 rounded-2xl bg-art-950 border border-art-800 space-y-1.5 text-xs">
+                        <div className="flex items-center gap-2 text-art-300 font-bold truncate">
+                          <User className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                          <span className="truncate">{order.customerName || order.shippingAddress?.fullName || 'Guest Buyer'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-art-400 font-mono text-[11px] truncate">
+                          <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span>{order.customerPhone || order.shippingAddress?.phone || '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-art-500 text-[11px] truncate">
+                          <MapPin className="w-3 h-3 text-cyan-600 shrink-0" />
+                          <span className="truncate">
+                            {order.shippingAddress
+                              ? `${order.shippingAddress.city}, ${order.shippingAddress.state}`
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Order Items Preview */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-art-500 block">
+                          Items ({order.orderItems.length}):
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {order.orderItems.slice(0, 3).map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[10px] text-art-400 bg-art-950 px-2 py-0.5 rounded-md border border-art-800 truncate max-w-[180px]"
+                            >
+                              {item.name} × {item.quantity}
+                            </span>
+                          ))}
+                          {order.orderItems.length > 3 && (
+                            <span className="text-[10px] text-art-500 bg-art-900 px-1.5 py-0.5 rounded-md">
+                              +{order.orderItems.length - 3} more
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-art-800/40">
-                      <div className="text-left sm:text-right">
-                        <div className="text-base sm:text-lg font-black text-brand-700 font-mono">
+                    {/* Footer: Price + Actions */}
+                    <div className="pt-3 border-t border-art-800/60 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-base font-black text-brand-700 font-mono">
                           {formatINR(order.totalPrice)}
                         </div>
-                        <div className="text-[11px] text-art-500">
-                          {order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}
+                        <div className="text-[10px] text-art-500">
+                          {order.paymentMethod || 'Online / Prepaid'}
                         </div>
                       </div>
+
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => setSelectedInvoiceOrder(order)}
-                          className="px-2.5 py-1.5 rounded-xl bg-art-900 hover:bg-art-850 border border-art-700 text-art-300 hover:text-brand-400 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-                          title="Generate & Print Tax Invoice"
+                          className="p-1.5 rounded-xl bg-art-900 hover:bg-art-850 border border-art-700 text-art-400 hover:text-brand-500 transition-colors shadow-xs"
+                          title="Generate Tax Invoice"
                         >
-                          <FileText className="w-3.5 h-3.5 text-brand-500" />
-                          <span className="hidden md:inline">Invoice</span>
+                          <FileText className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setSelectedPackingOrder(order)}
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-                          title="Print Workshop Packing Slip & Shipping Label"
+                          className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 transition-colors shadow-xs"
+                          title="Print Packing Slip"
                         >
-                          <PackageCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="hidden md:inline">Packing Slip</span>
+                          <PackageCheck className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => { setSelectedOrder(order); setIsStatusModal(true); }}
-                          className="p-2 rounded-xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 transition-colors shrink-0"
-                          title="Update shipment status"
+                          className="p-1.5 rounded-xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 transition-colors"
+                          title="Update Status"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
-                      <div className="p-1.5 rounded-lg bg-brand-50 border border-brand-200 shrink-0">
-                        <User className="w-3.5 h-3.5 text-brand-700" />
+                ))}
+              </div>
+            ) : (
+              /* LIST VIEW */
+              <div className="space-y-3 sm:space-y-4">
+                {filtered.map((order) => (
+                  <div
+                    key={order._id}
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-art-800 shadow-sm space-y-3 sm:space-y-4 hover:border-art-700 transition-all"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono text-art-500">
+                            #{order._id.slice(-10).toUpperCase()}
+                          </span>
+                          <StatusBadge type="order" status={order.status} size="sm" />
+                          {order.trackingNumber && (
+                            <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-500/30">
+                              {order.trackingNumber}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-art-600">
+                          Placed on {formatDate(order.createdAt, 'full')}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Customer</div>
-                        <div className="text-xs font-semibold text-art-300 truncate">
-                          {order.customerName || order.shippingAddress?.fullName || 'Guest Buyer'}
+
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-art-800/40">
+                        <div className="text-left sm:text-right">
+                          <div className="text-base sm:text-lg font-black text-brand-700 font-mono">
+                            {formatINR(order.totalPrice)}
+                          </div>
+                          <div className="text-[11px] text-art-500">
+                            {order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedInvoiceOrder(order)}
+                            className="px-2.5 py-1.5 rounded-xl bg-art-900 hover:bg-art-850 border border-art-700 text-art-300 hover:text-brand-400 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                            title="Generate & Print Tax Invoice"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-brand-500" />
+                            <span className="hidden md:inline">Invoice</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPackingOrder(order)}
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                            title="Print Workshop Packing Slip & Shipping Label"
+                          >
+                            <PackageCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="hidden md:inline">Packing Slip</span>
+                          </button>
+                          <button
+                            onClick={() => { setSelectedOrder(order); setIsStatusModal(true); }}
+                            className="p-2 rounded-xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 transition-colors shrink-0"
+                            title="Update shipment status"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
-                      <div className="p-1.5 rounded-lg bg-green-50 border border-green-200 shrink-0">
-                        <Phone className="w-3.5 h-3.5" style={{ color: '#15803d' }} />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
+                        <div className="p-1.5 rounded-lg bg-brand-50 border border-brand-200 shrink-0">
+                          <User className="w-3.5 h-3.5 text-brand-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Customer</div>
+                          <div className="text-xs font-semibold text-art-300 truncate">
+                            {order.customerName || order.shippingAddress?.fullName || 'Guest Buyer'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Phone</div>
-                        <div className="text-xs font-mono font-semibold text-art-300 truncate">
-                          {order.customerPhone || order.shippingAddress?.phone || '—'}
+
+                      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
+                        <div className="p-1.5 rounded-lg bg-green-50 border border-green-200 shrink-0">
+                          <Phone className="w-3.5 h-3.5" style={{ color: '#15803d' }} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Phone</div>
+                          <div className="text-xs font-mono font-semibold text-art-300 truncate">
+                            {order.customerPhone || order.shippingAddress?.phone || '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
+                        <div className="p-1.5 rounded-lg bg-cyan-50 border border-cyan-200 shrink-0">
+                          <MapPin className="w-3.5 h-3.5 text-cyan-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Delivery</div>
+                          <div className="text-xs font-semibold text-art-300 truncate">
+                            {order.shippingAddress
+                              ? `${order.shippingAddress.city}, ${order.shippingAddress.state}`
+                              : '—'}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-art-950 border border-art-800">
-                      <div className="p-1.5 rounded-lg bg-cyan-50 border border-cyan-200 shrink-0">
-                        <MapPin className="w-3.5 h-3.5 text-cyan-700" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[10px] text-art-500 uppercase font-bold tracking-wider">Delivery</div>
-                        <div className="text-xs font-semibold text-art-300 truncate">
-                          {order.shippingAddress
-                            ? `${order.shippingAddress.city}, ${order.shippingAddress.state}`
-                            : '—'}
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <Package className="w-4 h-4 text-art-600 shrink-0" />
+                      {order.orderItems.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[11px] text-art-400 bg-white px-2.5 py-1 rounded-full border border-art-800 truncate max-w-[200px]"
+                        >
+                          {item.name} × {item.quantity}
+                        </span>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                    <Package className="w-4 h-4 text-art-600 shrink-0" />
-                    {order.orderItems.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[11px] text-art-400 bg-white px-2.5 py-1 rounded-full border border-art-800 truncate max-w-[200px]"
-                      >
-                        {item.name} × {item.quantity}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

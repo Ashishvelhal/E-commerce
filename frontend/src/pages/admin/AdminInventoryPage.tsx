@@ -3,7 +3,7 @@ import {
   Warehouse, Plus, Search, Filter, AlertTriangle, CheckCircle2,
   XCircle, Edit2, Trash2, ArrowUpDown, DollarSign, Package,
   Droplets, Sparkles, Box, RefreshCw, Layers, MapPin, Building2, Minus,
-  BookOpen, Clock, Thermometer, ShieldAlert, Check, Play
+  BookOpen, Clock, Thermometer, ShieldAlert, Check, Play, LayoutGrid, LayoutList
 } from 'lucide-react';
 import { InventoryItem, InventoryStats } from '../../types';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
@@ -33,6 +33,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [activeTab, setActiveTab] = useState<'inventory' | 'recipes' | 'cure' | 'climate'>('inventory');
   const [executingRecipeSlug, setExecutingRecipeSlug] = useState<string | null>(null);
 
@@ -425,6 +426,34 @@ export const AdminInventoryPage: React.FC = () => {
                 </form>
 
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  {/* View Mode Toggle Switch */}
+                  <div className="flex items-center gap-1 p-1 bg-art-950 border border-art-800 rounded-xl shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        viewMode === 'list'
+                          ? 'bg-brand-500 text-white shadow-sm'
+                          : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                      }`}
+                    >
+                      <LayoutList className="w-3.5 h-3.5" />
+                      <span>List</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        viewMode === 'grid'
+                          ? 'bg-brand-500 text-white shadow-sm'
+                          : 'text-art-500 hover:text-art-300 hover:bg-art-900'
+                      }`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span>Cards</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => setOnlyLowStock(!onlyLowStock)}
                     className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs font-bold transition-all ${
@@ -497,26 +526,167 @@ export const AdminInventoryPage: React.FC = () => {
               </div>
             </div>
 
-        {/* Inventory List Table */}
-        <div className="bg-white border border-art-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
-          {loading ? (
-            <div className="p-12 sm:p-16 flex flex-col items-center justify-center gap-3 text-brand-700">
-              <RefreshCw className="w-8 h-8 animate-spin" />
-              <span className="text-xs font-mono uppercase tracking-widest text-art-500">
-                Loading Warehouse Inventory...
-              </span>
+        {/* Inventory Items View */}
+        {loading ? (
+          <div className="p-12 sm:p-16 flex flex-col items-center justify-center gap-3 text-brand-700 bg-white border border-art-800 rounded-2xl sm:rounded-3xl shadow-xs">
+            <RefreshCw className="w-8 h-8 animate-spin" />
+            <span className="text-xs font-mono uppercase tracking-widest text-art-500">
+              Loading Warehouse Inventory...
+            </span>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-12 sm:p-16 text-center space-y-3 bg-white border border-art-800 rounded-2xl sm:rounded-3xl shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center mx-auto">
+              <Warehouse className="w-6 h-6" />
             </div>
-          ) : items.length === 0 ? (
-            <div className="p-12 sm:p-16 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center mx-auto">
-                <Warehouse className="w-6 h-6" />
-              </div>
-              <h3 className="text-sm font-bold text-art-300">No Inventory Items Found</h3>
-              <p className="text-xs text-art-500 max-w-sm mx-auto">
-                No items match your active filters. Clear search or click "Add Raw Material" to record your workshop supplies.
-              </p>
-            </div>
-          ) : (
+            <h3 className="text-sm font-bold text-art-300">No Inventory Items Found</h3>
+            <p className="text-xs text-art-500 max-w-sm mx-auto">
+              No items match your active filters. Clear search or click "Add Raw Material" to record your workshop supplies.
+            </p>
+          </div>
+        ) : viewMode === 'grid' ? (
+          /* CARDS GRID VIEW */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {items.map((item) => {
+              const stockPercent = Math.min(
+                100,
+                Math.round((item.currentStock / (item.minStockAlert * 3 || 1)) * 100)
+              );
+              const isLow = item.currentStock <= item.minStockAlert;
+              const isOut = item.currentStock === 0;
+
+              return (
+                <div
+                  key={item._id}
+                  className="p-5 rounded-3xl bg-white border border-art-800 shadow-sm hover:border-brand-300 transition-all flex flex-col justify-between space-y-4"
+                >
+                  {/* Card Header: Name + Badge */}
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <h4 className="font-bold text-art-300 text-sm">{item.name}</h4>
+                        <div className="text-[11px] text-art-500">{item.category}</div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-art-900 border border-art-800 text-[10px] font-semibold text-art-400 shrink-0">
+                        {getTypeIcon(item.type)}
+                        <span>{item.type}</span>
+                      </span>
+                    </div>
+
+                    {/* Tags: Supplier & Location */}
+                    <div className="flex items-center gap-2 text-[10px] text-art-500 flex-wrap">
+                      {item.supplier && (
+                        <span className="flex items-center gap-1 bg-art-950 px-2 py-0.5 rounded border border-art-800">
+                          <Building2 className="w-3 h-3 text-art-600" />
+                          <span className="truncate max-w-[120px]">{item.supplier}</span>
+                        </span>
+                      )}
+                      {item.location && (
+                        <span className="flex items-center gap-1 bg-art-950 px-2 py-0.5 rounded border border-art-800">
+                          <MapPin className="w-3 h-3 text-art-600" />
+                          <span className="truncate max-w-[100px]">{item.location}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stock Meter */}
+                    <div className="p-3 rounded-2xl bg-art-950 border border-art-800 space-y-1.5 text-xs">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm font-black font-mono text-art-300">
+                          {item.currentStock.toLocaleString()}{' '}
+                          <span className="text-[11px] font-normal text-art-500">{item.unit}</span>
+                        </span>
+                        <span className="text-[10px] text-art-500">
+                          Min: {item.minStockAlert} {item.unit}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-art-900 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            isOut
+                              ? 'bg-rose-500 w-full'
+                              : isLow
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.max(5, stockPercent)}%` }}
+                        />
+                      </div>
+                      <div className="pt-1 flex items-center justify-between">
+                        <div className="text-[10px]">{getStockStatusBadge(item)}</div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() =>
+                              handleQuickStockAdjust(
+                                item._id,
+                                item.unit === 'g' || item.unit === 'ml' ? -50 : -1
+                              )
+                            }
+                            disabled={item.currentStock <= 0}
+                            className="p-1 rounded-md border border-art-800 bg-white hover:bg-art-900 text-art-600 disabled:opacity-30 transition-colors"
+                            title={`Deduct ${item.unit === 'g' || item.unit === 'ml' ? '50' : '1'} ${item.unit}`}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleQuickStockAdjust(
+                                item._id,
+                                item.unit === 'g' || item.unit === 'ml' ? 50 : 1
+                              )
+                            }
+                            className="p-1 rounded-md border border-art-800 bg-white hover:bg-art-900 text-art-600 transition-colors"
+                            title={`Add ${item.unit === 'g' || item.unit === 'ml' ? '50' : '1'} ${item.unit}`}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cost & Total Value */}
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <div>
+                        <span className="text-[10px] text-art-500 block">Unit Cost</span>
+                        <span className="font-mono font-bold text-brand-700">₹{item.costPerUnit.toFixed(2)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-art-500 block">Total Valuation</span>
+                        <span className="font-mono font-black text-art-300">
+                          ₹{Math.round(item.currentStock * item.costPerUnit).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="pt-3 border-t border-art-800/60 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingItem(item);
+                        setIsModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 transition-colors flex items-center gap-1 text-xs font-semibold px-2.5"
+                      title="Edit item"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item._id, item.name)}
+                      className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors"
+                      title="Delete item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* LIST TABLE VIEW */
+          <div className="bg-white border border-art-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto touch-pan-x">
               <table className="w-full text-left border-collapse min-w-[720px]">
                 <thead>
@@ -692,8 +862,8 @@ export const AdminInventoryPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
           </>
         )}
       </div>
