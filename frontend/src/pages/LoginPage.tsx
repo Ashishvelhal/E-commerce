@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Palette, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
+import { Palette, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -30,16 +30,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoAdmin = () => {
-    setEmail('admin@ecommerce.com');
-    setPassword('adminpassword123');
-  };
-
-  const handleDemoCustomer = () => {
-    setEmail('customer@ecommerce.com');
-    setPassword('customerpassword123');
-  };
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-6">
@@ -57,30 +47,6 @@ export const LoginPage: React.FC = () => {
           <p className="text-xs text-art-500">
             Access your handcrafted 3D wishlist, orders, and customized spaces.
           </p>
-        </div>
-
-        {/* Demo Account Credentials */}
-        <div className="p-4 bg-white rounded-3xl border border-art-800 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-brand-700">
-            <UserCheck className="w-4 h-4 text-brand-600" />
-            <span>Instant Demo Credentials (1-Click Fill)</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={handleDemoAdmin}
-              className="px-3 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-800 text-xs font-bold transition-all text-center"
-            >
-              👑 Admin Demo
-            </button>
-            <button
-              type="button"
-              onClick={handleDemoCustomer}
-              className="px-3 py-2 rounded-xl bg-plum-50 hover:bg-plum-100 border border-plum-200 text-plum-800 text-xs font-bold transition-all text-center"
-            >
-              🛍️ Customer Demo
-            </button>
-          </div>
         </div>
 
         {/* Login Form */}

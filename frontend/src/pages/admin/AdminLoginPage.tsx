@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Lock, Mail, ArrowRight, Palette, KeyRound, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, ArrowRight, Palette, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useToastStore } from '../../store/useToastStore';
 import { recordAdminAccess } from '../../services/securityLog';
@@ -49,14 +49,14 @@ export const AdminLoginPage: React.FC = () => {
     setIsSubmitting(true);
 
     // 1. Hit API immediately when user clicks "Enter Admin Studio" / presses Enter
-    recordAdminAccess('Login Attempt', email || 'admin@ecommerce.com');
+    recordAdminAccess('Login Attempt', email);
 
     const res = await login({ email, password });
     setIsSubmitting(false);
 
     if (res.success) {
       // 2. Hit API for Login Success
-      recordAdminAccess('Login Success', email || 'admin@ecommerce.com');
+      recordAdminAccess('Login Success', email);
       addToast('Welcome back to Rasin Arts Admin ✨', 'success');
       navigate('/admin');
     } else {
@@ -94,25 +94,6 @@ export const AdminLoginPage: React.FC = () => {
           </div>
           <p className="text-xs text-art-500 max-w-xs mx-auto font-medium">
             Secure access to manage your resin art catalog, orders, banners, and store settings.
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-2xl border border-brand-200 shadow-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-700 flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-brand-700" />
-              Demo Admin Access
-            </span>
-            <button
-              type="button"
-              onClick={() => { setEmail('admin@ecommerce.com'); setPassword('adminpassword123'); }}
-              className="px-3 py-1 rounded-lg bg-gradient-to-r from-brand-600 to-rose-600 hover:from-brand-500 hover:to-rose-500 text-white text-[11px] font-bold shadow transition-all"
-            >
-              Auto Fill
-            </button>
-          </div>
-          <p className="text-[11px] text-art-500 font-medium">
-            <span className="text-art-300 font-mono">admin@ecommerce.com</span>{' '}/{' '}
-            <span className="text-art-300 font-mono">adminpassword123</span>
           </p>
         </div>
         <form
