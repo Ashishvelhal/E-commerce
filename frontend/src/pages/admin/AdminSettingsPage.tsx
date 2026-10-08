@@ -1951,51 +1951,6 @@ export const AdminSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 4. Database Seeding & Demo Data Management */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-white border border-art-800 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-bold text-art-400 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
-                  <span>Resin Art Demo Database Seeding</span>
-                </h2>
-                <p className="text-xs text-art-500 mt-1 max-w-xl">
-                  Re-populates the database with 100% handcrafted resin art products (Geode Clocks, Nameplates, Agate Coasters, Pooja Thalis, Preservation Frames, Keychains), authentic raw materials inventory, BOM recipes, and sample B2B leads.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  if (
-                    !window.confirm(
-                      'Are you sure you want to reset & reseed the database with 100% handcrafted Resin Art products, categories, reviews, inventory, and recipes?'
-                    )
-                  )
-                    return;
-
-                  try {
-                    addToast('🌱 Seeding handcrafted resin arts dataset into MongoDB...', 'info');
-                    const res = await api.post('/settings/reseed');
-                    if (res.data?.success) {
-                      addToast(
-                        '✨ Success! Database populated with authentic Resin Arts products, categories & inventory.',
-                        'success'
-                      );
-                      setTimeout(() => window.location.reload(), 1500);
-                    }
-                  } catch (err: any) {
-                    addToast(err.response?.data?.message || 'Failed to reseed database', 'error');
-                  }
-                }}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Seed Resin Arts Data</span>
-              </button>
-            </div>
-          </div>
-
           <div className="flex justify-end pt-2">
             <button
               type="submit"
