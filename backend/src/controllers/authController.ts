@@ -88,8 +88,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { email, password } = parsed.data;
+    const cleanEmail = email.trim();
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    }).select('+password');
 
     if (!user) {
       await bcrypt.hash('dummy_timing_equalization', 10);
