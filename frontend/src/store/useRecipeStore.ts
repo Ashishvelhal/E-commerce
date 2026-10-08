@@ -15,7 +15,7 @@ export interface RecipeItem {
   _id: string;
   name: string;
   slug: string;
-  productType: 'clock' | 'coaster' | 'tray' | 'keychain' | 'bookmark' | 'jewelry' | 'custom';
+  productType: 'clock' | 'coaster' | 'tray' | 'keychain' | 'bookmark' | 'jewelry' | 'frame' | 'nameplate' | 'thali' | 'table' | 'preservation' | 'custom';
   description: string;
   materials: RecipeMaterial[];
   laborMinutes: number;

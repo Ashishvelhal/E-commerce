@@ -12,7 +12,7 @@ export interface IRecipeMaterial {
 export interface IRecipe extends Document {
   name: string;
   slug: string;
-  productType: 'clock' | 'coaster' | 'tray' | 'keychain' | 'bookmark' | 'jewelry' | 'custom';
+  productType: 'clock' | 'coaster' | 'tray' | 'keychain' | 'bookmark' | 'jewelry' | 'frame' | 'nameplate' | 'thali' | 'table' | 'preservation' | 'custom';
   description: string;
   materials: IRecipeMaterial[];
   laborMinutes: number;
@@ -77,7 +77,7 @@ const RecipeSchema = new Schema<IRecipe>(
     productType: {
       type: String,
       required: true,
-      enum: ['clock', 'coaster', 'tray', 'keychain', 'bookmark', 'jewelry', 'custom'],
+      enum: ['clock', 'coaster', 'tray', 'keychain', 'bookmark', 'jewelry', 'frame', 'nameplate', 'thali', 'table', 'preservation', 'custom'],
       default: 'custom',
     },
     description: {
