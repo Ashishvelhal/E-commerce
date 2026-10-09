@@ -186,7 +186,7 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       price: Number(price),
       discountPrice: discountPrice ? Number(discountPrice) : undefined,
       category,
-      brand: brand || 'AeroCraft',
+      brand: brand || 'Rasin Arts',
       stock: Number(stock),
       images: Array.isArray(images) && images.length > 0 ? images : [thumbnail || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=60'],
       thumbnail: thumbnail || (images && images[0]) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=60',

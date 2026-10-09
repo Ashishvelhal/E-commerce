@@ -272,6 +272,13 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
  */
 export const triggerReseed = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({
+        success: false,
+        message: 'Database re-seeding is disabled in production mode to protect real customer orders and records.',
+      });
+      return;
+    }
     const { seedDatabase } = await import('../utils/seeder');
     await seedDatabase();
     res.status(200).json({
