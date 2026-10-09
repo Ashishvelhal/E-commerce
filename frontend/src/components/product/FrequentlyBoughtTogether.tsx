@@ -3,6 +3,7 @@ import { ShoppingBag, Plus, Check, Loader2 } from 'lucide-react';
 import { Product } from '../../types';
 import { useCartStore } from '../../store/useCartStore';
 import { useToastStore } from '../../store/useToastStore';
+import { formatINR } from '../../utils/formatters';
 import api from '../../services/api';
 
 export interface FrequentlyBoughtProduct {
@@ -104,11 +105,7 @@ export const FrequentlyBoughtTogether: React.FC<FrequentlyBoughtTogetherProps> =
   };
 
   const formatCurrency = (minorUnit: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(minorUnit / 100);
+    return formatINR(minorUnit, true, false);
   };
 
   const handleAddAllToCart = async () => {

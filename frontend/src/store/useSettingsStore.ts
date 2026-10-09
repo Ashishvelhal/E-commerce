@@ -81,9 +81,14 @@ export interface StoreSettings {
   logoImageUrl?: string;
   logoBlobShape?: string;
   logoGradient?: string;
+  logoMode?: 'icon' | 'image';
+  emailRoutingMode?: 'single' | 'multi';
+  universalEmail?: string;
   navbarIconStyle?: string;
+  navbarAnimation?: string;
   navbarIconAnimation?: string;
   navbarCustomIcons?: Record<string, string>;
+  tabIcons?: Record<string, string>;
 }
 
 interface SettingsState {

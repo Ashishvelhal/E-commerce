@@ -13,6 +13,12 @@ import { useVoiceStore } from '../../store/useVoiceStore';
 import { StudioInvoiceModal } from '../../components/admin/StudioInvoiceModal';
 import { WorkshopClimateWidget } from '../../components/admin/WorkshopClimateWidget';
 import { AIImageCostAnalyzerModal, AIAnalyzedCostData } from '../../components/admin/AIImageCostAnalyzerModal';
+import {
+  calculatePricing,
+  PRODUCT_COSTING_TEMPLATES,
+  generateMultilingualQuote,
+  ProductCostingTemplate,
+} from '../../utils/pricingCalculator';
 import api from '../../services/api';
 
 export const AdminPricingCalculatorPage: React.FC = () => {
@@ -94,23 +100,26 @@ export const AdminPricingCalculatorPage: React.FC = () => {
     fetchCatalog();
   }, []);
 
-  // Cost Computations
-  const resinCost = resinWeightGrams * resinPricePerGram;
-  const laborCost = (laborMinutes / 60) * hourlyWage;
-
-  const totalMaterialCost = resinCost + pigmentCost + hardwareCost + packagingCost;
-  const totalUnitCost = totalMaterialCost + laborCost + overheadCost;
-
-  // Selling Price Calculation:
-  // Selling Price = Total Cost ÷ (1 - Margin%)
-  const marginDecimal = profitMarginPercent / 100;
-  const recommendedPrice =
-    marginDecimal < 1
-      ? Math.round(totalUnitCost / (1 - marginDecimal))
-      : Math.round(totalUnitCost * 2);
-
-  const profitPerPiece = recommendedPrice - totalUnitCost;
-  const markupPercent = totalUnitCost > 0 ? (profitPerPiece / totalUnitCost) * 100 : 0;
+  // Cost Computations from centralized pricing calculation engine
+  const {
+    resinCost,
+    laborCost,
+    totalMaterialCost,
+    totalUnitCost,
+    recommendedPrice,
+    profitPerPiece,
+    markupPercent,
+  } = calculatePricing({
+    resinWeightGrams,
+    resinPricePerGram,
+    pigmentCost,
+    hardwareCost,
+    packagingCost,
+    laborMinutes,
+    hourlyWage,
+    overheadCost,
+    profitMarginPercent,
+  });
 
   // Handle updating catalog product price in database
   const handleUpdateStorePrice = async () => {
@@ -132,18 +141,7 @@ export const AdminPricingCalculatorPage: React.FC = () => {
 
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  const PRODUCT_TEMPLATES = [
-    { label: '💎 Keychain', name: 'Custom Alphabet / Shaker Keychain', resin: 30, pigment: 15, hardware: 20, packaging: 15, laborMins: 15, margin: 60 },
-    { label: '☕ Coaster', name: 'Ocean Wave Geode Coaster', resin: 80, pigment: 25, hardware: 0, packaging: 25, laborMins: 20, margin: 55 },
-    { label: '📖 Bookmark', name: 'Floral Gold Flake Bookmark', resin: 30, pigment: 15, hardware: 10, packaging: 15, laborMins: 12, margin: 60 },
-    { label: '💍 Jewelry Pendant', name: 'Preserved Flower Pendant Necklace', resin: 20, pigment: 20, hardware: 35, packaging: 20, laborMins: 25, margin: 65 },
-    { label: '🪴 Trinket Tray', name: 'Marble Agate Vanity Tray', resin: 160, pigment: 40, hardware: 60, packaging: 35, laborMins: 35, margin: 55 },
-    { label: '🏷️ Name Plate', name: 'Personalized Acrylic & Resin Desk Plate', resin: 250, pigment: 50, hardware: 40, packaging: 40, laborMins: 45, margin: 55 },
-    { label: '🕰️ Wall Clock', name: '12-inch Luxury Crystal Wall Clock', resin: 350, pigment: 80, hardware: 120, packaging: 60, laborMins: 60, margin: 60 },
-    { label: '🌸 Flower Cube', name: 'Wedding Floral Keepsake Cube', resin: 300, pigment: 30, hardware: 0, packaging: 50, laborMins: 50, margin: 65 },
-  ];
-
-  const applyTemplate = (t: typeof PRODUCT_TEMPLATES[0]) => {
+  const applyTemplate = (t: ProductCostingTemplate) => {
     setCustomProjectName(t.name);
     setSelectedProduct(null);
     setResinWeightGrams(t.resin);
@@ -156,52 +154,20 @@ export const AdminPricingCalculatorPage: React.FC = () => {
   };
 
   const copyQuoteSummary = () => {
-    let quoteText = '';
     const itemName = selectedProduct ? selectedProduct.title : customProjectName;
-
-    if (quoteLanguage === 'hi') {
-      quoteText = `🎨 *रेज़िन आर्ट्स — ग्राहक कोटेशन*
-━━━━━━━━━━━━━━━━━━━━
-📦 *उत्पाद*: ${itemName}
-🧪 *कच्चा रेजिन*: ${resinWeightGrams}g (₹${resinCost.toFixed(0)})
-🎨 *रंग व पिगमेंट*: ₹${pigmentCost}
-🧰 *हार्डवेयर व फिटिंग*: ₹${hardwareCost}
-⏱️ *कारीगरी मजदूरी*: ${laborMinutes} मिनट (₹${laborCost.toFixed(0)})
-🎁 *उपहार पैकेजिंग*: ₹${packagingCost}
-⚡ *स्टूडियो खर्च*: ₹${overheadCost}
-━━━━━━━━━━━━━━━━━━━━
-💰 *अंतिम विक्रय मूल्य*: ₹${recommendedPrice.toLocaleString('en-IN')}
-✨ *निर्माण समय*: 3 से 5 कार्य दिवस
-━━━━━━━━━━━━━━━━━━━━`;
-    } else if (quoteLanguage === 'mr') {
-      quoteText = `🎨 *रेझिन आर्ट्स — ग्राहक कोटेशन*
-━━━━━━━━━━━━━━━━━━━━
-📦 *उत्पाद*: ${itemName}
-🧪 *कच्चा रेझिन*: ${resinWeightGrams}g (₹${resinCost.toFixed(0)})
-🎨 *रंग व मायका पिगमेंट*: ₹${pigmentCost}
-🧰 *हार्डवेअर व कड्या*: ₹${hardwareCost}
-⏱️ *कारीगरी मजुरी*: ${laborMinutes} मिनिटे (₹${laborCost.toFixed(0)})
-🎁 *गिफ्ट पॅकेजिंग*: ₹${packagingCost}
-⚡ *स्टुडिओ खर्च*: ₹${overheadCost}
-━━━━━━━━━━━━━━━━━━━━
-💰 *अंतिम विक्री किंमत*: ₹${recommendedPrice.toLocaleString('en-IN')}
-✨ *तयार करण्याचा कालावधी*: 3 ते 5 कामकाजाचे दिवस
-━━━━━━━━━━━━━━━━━━━━`;
-    } else {
-      quoteText = `🎨 *Rasin Arts — Client Quotation*
-━━━━━━━━━━━━━━━━━━━━
-📦 *Item*: ${itemName}
-🧪 *Raw Resin*: ${resinWeightGrams}g (₹${resinCost.toFixed(0)})
-🎨 *Pigments & Inks*: ₹${pigmentCost}
-🧰 *Hardware & Findings*: ₹${hardwareCost}
-⏱️ *Crafting Labor*: ${laborMinutes} mins (₹${laborCost.toFixed(0)})
-🎁 *Luxury Gift Packaging*: ₹${packagingCost}
-⚡ *Studio Overheads*: ₹${overheadCost}
-━━━━━━━━━━━━━━━━━━━━
-💰 *Quoted Selling Price*: ₹${recommendedPrice.toLocaleString('en-IN')}
-✨ *Production Window*: 3 to 5 business days
-━━━━━━━━━━━━━━━━━━━━`;
-    }
+    const quoteText = generateMultilingualQuote({
+      itemName,
+      resinWeightGrams,
+      resinCost,
+      pigmentCost,
+      hardwareCost,
+      laborMinutes,
+      laborCost,
+      packagingCost,
+      overheadCost,
+      recommendedPrice,
+      language: quoteLanguage,
+    });
 
     navigator.clipboard.writeText(quoteText);
     setCopiedQuote(true);
@@ -287,7 +253,7 @@ export const AdminPricingCalculatorPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-2">
-            {PRODUCT_TEMPLATES.map((t) => (
+            {PRODUCT_COSTING_TEMPLATES.map((t) => (
               <button
                 key={t.label}
                 type="button"
