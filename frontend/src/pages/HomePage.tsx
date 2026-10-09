@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, Sparkles, Palette, Box, ChevronRight, ChevronLeft, Leaf,
-  Star, TrendingUp, BookOpen, Zap,
+  Star, TrendingUp, BookOpen, Zap, Instagram, MessageCircle, ExternalLink, Heart,
 } from 'lucide-react';
 import { Product, Post, Banner, Category } from '../types';
 import { ProductCanvas } from '../components/3d/ProductCanvas';
 import { ProductCard } from '../components/product/ProductCard';
 import { Quick3DModal } from '../components/product/Quick3DModal';
 import { BannerSkeleton, ProductCardSkeleton } from '../components/common/Skeletons';
+import { useSettingsStore } from '../store/useSettingsStore';
 import api from '../services/api';
 
 /* ── Floating ambient orb helper ── */
@@ -29,6 +30,7 @@ export const HomePage: React.FC = () => {
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettingsStore();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -449,6 +451,130 @@ export const HomePage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Instagram & Artisan Community Showcase */}
+      {settings.socialLinks?.showSocialFeed !== false && (
+        <section className="w-full max-w-[1760px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+          <div className="rounded-3xl bg-gradient-to-b from-art-900/60 to-art-950/90 border border-art-800 p-6 sm:p-10 lg:p-12 relative overflow-hidden shadow-2xl">
+            <Orb className="w-[300px] h-[300px] -top-20 -right-20 bg-pink-500/10" />
+            <Orb className="w-[300px] h-[300px] -bottom-20 -left-20 bg-brand-500/10" />
+
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-10 relative z-10">
+              <div>
+                <div className="text-xs font-bold text-pink-600 uppercase tracking-[0.2em] flex items-center gap-1.5 mb-2 font-sans">
+                  <Instagram className="w-4 h-4" /> Live from the Studio
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-bold text-art-300" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  Follow Our Resin Journey
+                </h2>
+                <p className="text-xs sm:text-sm text-art-500 mt-2 max-w-xl">
+                  Watch behind-the-scenes pigment mixes, demolding ASMR videos, and bespoke commissioned pieces created daily in our master studio.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {settings.socialLinks?.whatsappCommunity && (
+                  <a
+                    href={settings.socialLinks.whatsappCommunity}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 border border-emerald-500/20 text-xs font-bold transition-all shadow-sm"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Join VIP Drop Club</span>
+                  </a>
+                )}
+                <a
+                  href={settings.socialLinks?.instagram || 'https://instagram.com/rasinarts.studio'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 text-white text-xs font-bold shadow-lg glow-brand transition-all active:scale-[0.98]"
+                >
+                  <Instagram className="w-4 h-4" />
+                  <span>{settings.socialLinks?.instagramHandle || '@rasinarts.studio'}</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+              </div>
+            </div>
+
+            {/* Curated Studio Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 relative z-10">
+              {[
+                {
+                  img: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80',
+                  title: 'Ocean Geode Wall Art',
+                  likes: '1.4k',
+                },
+                {
+                  img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+                  title: '24K Gold Leaf Coasters',
+                  likes: '980',
+                },
+                {
+                  img: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&auto=format&fit=crop&q=80',
+                  title: 'Preserved Rose Tray',
+                  likes: '2.1k',
+                },
+                {
+                  img: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600&auto=format&fit=crop&q=80',
+                  title: 'Midnight Nebula Clock',
+                  likes: '1.8k',
+                },
+                {
+                  img: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=600&auto=format&fit=crop&q=80',
+                  title: 'Resin River Walnut Board',
+                  likes: '3.2k',
+                },
+                {
+                  img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
+                  title: 'Opal Sheen Trinket Dish',
+                  likes: '1.1k',
+                },
+              ].map((item, idx) => (
+                <a
+                  key={idx}
+                  href={settings.socialLinks?.instagram || 'https://instagram.com/rasinarts.studio'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative aspect-square rounded-2xl overflow-hidden border border-art-800/80 bg-art-900 shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:border-pink-500/50"
+                >
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
+                    <div className="flex justify-end">
+                      <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                        <Instagram className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-white line-clamp-1">{item.title}</div>
+                      <div className="flex items-center gap-1 text-[10px] text-pink-300 mt-0.5">
+                        <Heart className="w-3 h-3 fill-pink-400 text-pink-400" />
+                        <span>{item.likes}</span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Community Highlight Footer */}
+            <div className="mt-8 pt-6 border-t border-art-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left text-xs text-art-500 relative z-10">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-brand-600" />
+                <span>Tag <strong className="text-art-300 font-semibold">{settings.socialLinks?.instagramHandle || '@rasinarts.studio'}</strong> or use <strong className="text-art-300 font-semibold">#ResinArtsStudio</strong> on your posts to be featured!</span>
+              </div>
+              <div className="text-[11px] text-art-600">
+                Weekly curated feature drops & VIP community giveaways
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <Quick3DModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
     </div>
   );

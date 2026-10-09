@@ -139,6 +139,20 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
       };
     }
 
+    if (!settings.socialLinks) {
+      settings.socialLinks = {
+        instagram: 'https://instagram.com/rasinarts',
+        facebook: 'https://facebook.com/rasinarts',
+        youtube: 'https://youtube.com/@rasinarts',
+        pinterest: 'https://pinterest.com/rasinarts',
+        twitter: 'https://twitter.com/rasinarts',
+        whatsappCommunity: 'https://chat.whatsapp.com/rasinarts',
+        linkedin: '',
+        instagramHandle: '@rasinarts.studio',
+        showSocialFeed: true,
+      };
+    }
+
     // Ensure enabledCustomizerProducts exists if loaded from an older document
     if (!settings.enabledCustomizerProducts || settings.enabledCustomizerProducts.length === 0) {
       settings.enabledCustomizerProducts = [
@@ -179,6 +193,7 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
       customMailboxes,
       emailTemplates,
       smtpConfig,
+      socialLinks,
       whatsappNumber,
       whatsappCheckoutEnabled,
       whatsappCustomMessage,
@@ -224,6 +239,12 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
       settings.smtpConfig = {
         ...settings.smtpConfig,
         ...smtpConfig,
+      };
+    }
+    if (socialLinks !== undefined) {
+      settings.socialLinks = {
+        ...settings.socialLinks,
+        ...socialLinks,
       };
     }
     if (whatsappNumber !== undefined) settings.whatsappNumber = whatsappNumber;

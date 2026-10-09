@@ -42,6 +42,18 @@ export interface ISmtpConfig {
   enabled?: boolean;
 }
 
+export interface ISocialLinks {
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
+  pinterest?: string;
+  twitter?: string;
+  whatsappCommunity?: string;
+  linkedin?: string;
+  instagramHandle?: string;
+  showSocialFeed?: boolean;
+}
+
 export interface StoreSettings {
   storeName: string;
   supportEmail: string;
@@ -51,6 +63,7 @@ export interface StoreSettings {
   customMailboxes?: ICustomMailbox[];
   emailTemplates?: IEmailTemplates;
   smtpConfig?: ISmtpConfig;
+  socialLinks?: ISocialLinks;
   whatsappNumber: string;
   whatsappCheckoutEnabled: boolean;
   whatsappCustomMessage: string;
@@ -155,6 +168,18 @@ const DEFAULT_SMTP_CONFIG: ISmtpConfig = {
   enabled: false,
 };
 
+export const DEFAULT_SOCIAL_LINKS: ISocialLinks = {
+  instagram: 'https://instagram.com/rasinarts',
+  facebook: 'https://facebook.com/rasinarts',
+  youtube: 'https://youtube.com/@rasinarts',
+  pinterest: 'https://pinterest.com/rasinarts',
+  twitter: 'https://twitter.com/rasinarts',
+  whatsappCommunity: 'https://chat.whatsapp.com/rasinarts',
+  linkedin: '',
+  instagramHandle: '@rasinarts.studio',
+  showSocialFeed: true,
+};
+
 const getInitialCustomizerState = (): boolean => {
   try {
     const saved = localStorage.getItem('rasin_customizer_enabled');
@@ -186,6 +211,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     customMailboxes: DEFAULT_CUSTOM_MAILBOXES,
     emailTemplates: DEFAULT_EMAIL_TEMPLATES,
     smtpConfig: DEFAULT_SMTP_CONFIG,
+    socialLinks: DEFAULT_SOCIAL_LINKS,
     whatsappNumber: '+91 98765 43210',
     whatsappCheckoutEnabled: true,
     whatsappCustomMessage: 'Hello Rasin Arts Studio! I would like to place an order for the following items:',
@@ -247,6 +273,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
             customMailboxes: data.customMailboxes || DEFAULT_CUSTOM_MAILBOXES,
             emailTemplates: data.emailTemplates || DEFAULT_EMAIL_TEMPLATES,
             smtpConfig: data.smtpConfig || DEFAULT_SMTP_CONFIG,
+            socialLinks: data.socialLinks || DEFAULT_SOCIAL_LINKS,
             whatsappNumber,
             whatsappCheckoutEnabled,
             whatsappCustomMessage,
@@ -317,6 +344,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
             customMailboxes: data.customMailboxes || get().settings.customMailboxes || DEFAULT_CUSTOM_MAILBOXES,
             emailTemplates: data.emailTemplates || get().settings.emailTemplates || DEFAULT_EMAIL_TEMPLATES,
             smtpConfig: data.smtpConfig || get().settings.smtpConfig || DEFAULT_SMTP_CONFIG,
+            socialLinks: data.socialLinks || get().settings.socialLinks || DEFAULT_SOCIAL_LINKS,
             whatsappNumber,
             whatsappCheckoutEnabled,
             whatsappCustomMessage,

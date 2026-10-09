@@ -1,6 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Palette, Instagram, Twitter, Heart as PinIcon, Truck, RefreshCw, Headphones, Leaf, Mail } from 'lucide-react';
+import {
+  Palette,
+  Instagram,
+  Twitter,
+  Heart as PinIcon,
+  Truck,
+  RefreshCw,
+  Headphones,
+  Leaf,
+  Mail,
+  Youtube,
+  Globe,
+  MessageCircle,
+  Linkedin,
+} from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { getIconComponent, getLogoGradientClass, getLogoShapeClass } from '../../utils/iconHelper';
 
@@ -13,6 +27,56 @@ export const Footer: React.FC = () => {
   const logoBlobShape = settings?.logoBlobShape || 'resin-blob';
   const logoGradient = settings?.logoGradient || 'amber-rose';
   const LogoIconComp = getIconComponent(logoIconName, Palette);
+  const social = settings?.socialLinks;
+
+  const socialItems = [
+    {
+      name: 'Instagram',
+      href: social?.instagram || 'https://instagram.com/rasinarts',
+      Icon: Instagram,
+      color: 'hover:text-rose-500 hover:border-rose-500/40 text-art-500',
+    },
+    {
+      name: 'YouTube',
+      href: social?.youtube || 'https://youtube.com/@rasinarts',
+      Icon: Youtube,
+      color: 'hover:text-red-500 hover:border-red-500/40 text-art-500',
+    },
+    {
+      name: 'Pinterest',
+      href: social?.pinterest || 'https://pinterest.com/rasinarts',
+      Icon: PinIcon,
+      color: 'hover:text-rose-600 hover:border-rose-600/40 text-art-500',
+    },
+    {
+      name: 'WhatsApp VIP',
+      href: social?.whatsappCommunity || (settings?.whatsappNumber ? `https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}` : 'https://chat.whatsapp.com/rasinarts'),
+      Icon: MessageCircle,
+      color: 'hover:text-emerald-500 hover:border-emerald-500/40 text-art-500',
+    },
+    {
+      name: 'Facebook',
+      href: social?.facebook || 'https://facebook.com/rasinarts',
+      Icon: Globe,
+      color: 'hover:text-blue-500 hover:border-blue-500/40 text-art-500',
+    },
+    {
+      name: 'X (Twitter)',
+      href: social?.twitter || 'https://twitter.com/rasinarts',
+      Icon: Twitter,
+      color: 'hover:text-zinc-300 hover:border-zinc-500/40 text-art-500',
+    },
+    ...(social?.linkedin
+      ? [
+          {
+            name: 'LinkedIn',
+            href: social.linkedin,
+            Icon: Linkedin,
+            color: 'hover:text-sky-500 hover:border-sky-500/40 text-art-500',
+          },
+        ]
+      : []),
+  ].filter((item) => Boolean(item.href));
 
   return (
     <footer className="bg-art-950 border-t border-art-800/80 text-art-400 text-sm mt-20 pb-20 md:pb-8 relative overflow-hidden">
@@ -81,16 +145,15 @@ export const Footer: React.FC = () => {
               <span>{settings?.supportEmail || 'support@rasinarts.com'}</span>
             </a>
           </div>
-          <div className="flex items-center gap-2.5 pt-1">
-            {[
-              { name: 'instagram', href: '#', Icon: Instagram, color: 'hover:text-rose-600 hover:border-rose-500/40 text-art-500' },
-              { name: 'pinterest', href: '#', Icon: PinIcon, color: 'hover:text-brand-600 hover:border-brand-500/40 text-art-500' },
-              { name: 'twitter', href: '#', Icon: Twitter, color: 'hover:text-plum-600 hover:border-plum-500/40 text-art-500' },
-            ].map(({ name, href, Icon, color }) => (
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            {socialItems.map(({ name, href, Icon, color }) => (
               <a
                 key={name}
                 href={href}
-                className={`p-2 rounded-xl bg-art-900 border border-art-800 transition-all ${color}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Visit ${name}`}
+                className={`p-2 rounded-xl bg-art-900 border border-art-800 transition-all ${color} hover:scale-110 active:scale-95`}
               >
                 <Icon className="w-4 h-4" />
               </a>

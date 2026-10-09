@@ -16,6 +16,9 @@ import {
   Check,
   Loader2,
   Info,
+  Share2,
+  Copy,
+  MessageCircle,
 } from 'lucide-react';
 import { Product, Review } from '../types';
 import { ProductCanvas } from '../components/3d/ProductCanvas';
@@ -42,12 +45,20 @@ export const ProductDetailsPage: React.FC = () => {
   const [selectedColorName, setSelectedColorName] = useState<string | undefined>(undefined);
 
   const [quantity, setQuantity] = useState(1);
+  const [copied, setCopied] = useState(false);
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
 
   const { addItem } = useCartStore();
   const { addToast } = useToastStore();
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    addToast('Link copied to clipboard!', 'success');
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   useEffect(() => {
     const fetchProductAndReviews = async () => {
@@ -319,6 +330,79 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="flex flex-col items-center text-center gap-1 p-2 rounded-xl bg-white border border-art-800 shadow-sm">
               <RefreshCw className="w-4 h-4 text-rose-600" />
               <span>7-Day Returns</span>
+            </div>
+          </div>
+
+          {/* Social Share Strip */}
+          <div className="pt-4 border-t border-art-800 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-art-500">
+              <Share2 className="w-3.5 h-3.5 text-brand-600" />
+              <span>Share this Artwork:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Discover "${product.title}" - Handcrafted Resin Art by Resin Arts Studio: ${window.location.href}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all duration-200 border border-emerald-200"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </a>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 border border-blue-200"
+                title="Share on Facebook"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              </a>
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this handcrafted ${product.title} from Resin Arts!`)}&url=${encodeURIComponent(window.location.href)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 hover:bg-sky-500 hover:text-white flex items-center justify-center transition-all duration-200 border border-sky-200"
+                title="Share on X / Twitter"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+              <a
+                href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}&media=${encodeURIComponent(product.thumbnail || product.images?.[0] || '')}&description=${encodeURIComponent(product.title)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all duration-200 border border-rose-200"
+                title="Pin on Pinterest"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.291 1.199-.334 1.365-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                </svg>
+              </a>
+              <button
+                onClick={handleCopyLink}
+                className={`px-2.5 h-8 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 border ${
+                  copied
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                    : 'bg-art-850 text-art-400 hover:text-art-200 hover:bg-art-800 border-art-800'
+                }`}
+                title="Copy Product Link"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -27,12 +27,18 @@ import {
   AtSign,
   Layers,
   Headphones,
+  Instagram,
+  Twitter,
+  Share2,
+  Youtube,
+  Linkedin,
+  Heart as PinIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useToastStore } from '../../store/useToastStore';
-import { useSettingsStore, ICustomMailbox, IEmailTemplates, ISmtpConfig } from '../../store/useSettingsStore';
+import { useSettingsStore, ICustomMailbox, IEmailTemplates, ISmtpConfig, ISocialLinks, DEFAULT_SOCIAL_LINKS } from '../../store/useSettingsStore';
 import api from '../../services/api';
 import {
   getIconComponent,
@@ -203,6 +209,12 @@ export const AdminSettingsPage: React.FC = () => {
           ...settings.smtpConfig,
         });
       }
+      if (settings.socialLinks) {
+        setSocialLinks({
+          ...DEFAULT_SOCIAL_LINKS,
+          ...settings.socialLinks,
+        });
+      }
       if (settings.whatsappNumber) setWhatsappNumber(settings.whatsappNumber);
       if (settings.whatsappCheckoutEnabled !== undefined)
         setWhatsappCheckoutEnabled(settings.whatsappCheckoutEnabled);
@@ -220,8 +232,10 @@ export const AdminSettingsPage: React.FC = () => {
     }
   }, [settings]);
 
-  type SettingsTabId = 'brand' | 'customizer' | 'whatsapp' | 'shipping' | 'email' | 'security' | 'all';
+  type SettingsTabId = 'brand' | 'customizer' | 'whatsapp' | 'shipping' | 'email' | 'social' | 'security' | 'all';
   const [activeTab, setActiveTab] = useState<SettingsTabId>('brand');
+
+  const [socialLinks, setSocialLinks] = useState<ISocialLinks>(DEFAULT_SOCIAL_LINKS);
 
   const SETTINGS_TABS: { id: SettingsTabId; label: string; sub: string; icon: any; countBadge?: string }[] = [
     { id: 'brand', label: 'Brand & Visuals', sub: 'Logo, Tagline, Navbar & Themes', icon: Palette },
@@ -229,6 +243,7 @@ export const AdminSettingsPage: React.FC = () => {
     { id: 'whatsapp', label: 'WhatsApp Direct Orders', sub: '1-Click Checkout & Message', icon: MessageCircle, countBadge: whatsappCheckoutEnabled ? 'Live' : 'Off' },
     { id: 'shipping', label: 'Shipping, Tax & Studio', sub: 'Free Shipping, GSTIN & Address', icon: Truck },
     { id: 'email', label: 'Mail & Communications', sub: 'Universal Email, Mailboxes & SMTP', icon: Mail, countBadge: customMailboxes.length > 0 ? `${customMailboxes.length}` : undefined },
+    { id: 'social', label: 'Social Media & Community', sub: 'Instagram, YouTube, Pinterest & Feeds', icon: Share2, countBadge: 'Connected' },
     { id: 'security', label: 'Admin Security', sub: 'Account Name & Password', icon: ShieldCheck },
   ];
 
@@ -341,6 +356,7 @@ export const AdminSettingsPage: React.FC = () => {
         customMailboxes,
         emailTemplates,
         smtpConfig,
+        socialLinks,
         whatsappNumber,
         whatsappCheckoutEnabled,
         whatsappCustomMessage,
@@ -2089,6 +2105,339 @@ export const AdminSettingsPage: React.FC = () => {
                   placeholder="Studio #402, Artisans Galleria, Linking Road, Mumbai, MH 400050, India"
                   className="w-full bg-white border border-art-700 rounded-xl px-3.5 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500"
                 />
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* 4. Social Media & Community Channels */}
+          {(activeTab === 'all' || activeTab === 'social') && (
+          <div className="p-4 sm:p-6 rounded-2xl bg-white border border-art-800 space-y-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-art-800">
+              <div className="space-y-1">
+                <h2 className="text-sm font-bold text-art-400 uppercase tracking-wider flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-brand-500" />
+                  <span>Social Media &amp; Community Channels</span>
+                </h2>
+                <p className="text-xs text-art-500">
+                  Connect your Instagram, YouTube, Pinterest, WhatsApp community, and social channels across your storefront footer, product shares, and home showcase.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={socialLinks.showSocialFeed ?? true}
+                    onChange={(e) =>
+                      setSocialLinks({ ...socialLinks, showSocialFeed: e.target.checked })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-art-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-art-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                  <span className="ml-2 text-xs font-semibold text-art-300">
+                    Show Social Banner on Storefront
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Social Media Inputs Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Instagram URL */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-rose-50 text-rose-600">
+                      <Instagram className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Instagram Profile URL</span>
+                  </label>
+                  {socialLinks.instagram && (
+                    <a
+                      href={socialLinks.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.instagram || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, instagram: e.target.value })
+                  }
+                  placeholder="https://instagram.com/rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* Instagram Handle */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-pink-50 text-pink-600">
+                    <AtSign className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Instagram Handle / Tag</span>
+                </label>
+                <input
+                  type="text"
+                  value={socialLinks.instagramHandle || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, instagramHandle: e.target.value })
+                  }
+                  placeholder="@rasinarts.studio"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* Facebook URL */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-blue-50 text-blue-600">
+                      <Globe className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Facebook Page URL</span>
+                  </label>
+                  {socialLinks.facebook && (
+                    <a
+                      href={socialLinks.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.facebook || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, facebook: e.target.value })
+                  }
+                  placeholder="https://facebook.com/rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* YouTube Channel */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-red-50 text-red-600">
+                      <Youtube className="w-3.5 h-3.5" />
+                    </div>
+                    <span>YouTube Channel URL</span>
+                  </label>
+                  {socialLinks.youtube && (
+                    <a
+                      href={socialLinks.youtube}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.youtube || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, youtube: e.target.value })
+                  }
+                  placeholder="https://youtube.com/@rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* Pinterest Portfolio */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-rose-50 text-rose-700">
+                      <PinIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Pinterest Portfolio URL</span>
+                  </label>
+                  {socialLinks.pinterest && (
+                    <a
+                      href={socialLinks.pinterest}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.pinterest || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, pinterest: e.target.value })
+                  }
+                  placeholder="https://pinterest.com/rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* WhatsApp Community / VIP Channel */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-emerald-50 text-emerald-600">
+                      <MessageCircle className="w-3.5 h-3.5" />
+                    </div>
+                    <span>WhatsApp VIP Community / Channel</span>
+                  </label>
+                  {socialLinks.whatsappCommunity && (
+                    <a
+                      href={socialLinks.whatsappCommunity}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.whatsappCommunity || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, whatsappCommunity: e.target.value })
+                  }
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* X / Twitter */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-zinc-100 text-zinc-700">
+                      <Twitter className="w-3.5 h-3.5" />
+                    </div>
+                    <span>X (Twitter) Profile URL</span>
+                  </label>
+                  {socialLinks.twitter && (
+                    <a
+                      href={socialLinks.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.twitter || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, twitter: e.target.value })
+                  }
+                  placeholder="https://twitter.com/rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              {/* LinkedIn */}
+              <div className="p-4 rounded-xl bg-art-950 border border-art-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-art-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-sky-50 text-sky-600">
+                      <Linkedin className="w-3.5 h-3.5" />
+                    </div>
+                    <span>LinkedIn Company Page</span>
+                  </label>
+                  {socialLinks.linkedin && (
+                    <a
+                      href={socialLinks.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-brand-500 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={socialLinks.linkedin || ''}
+                  onChange={(e) =>
+                    setSocialLinks({ ...socialLinks, linkedin: e.target.value })
+                  }
+                  placeholder="https://linkedin.com/company/rasinarts"
+                  className="w-full bg-white border border-art-700 rounded-xl px-3 py-2 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Live Visual Preview of Social Badges */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/5 via-rose-500/5 to-purple-500/5 border border-brand-500/20 space-y-2">
+              <span className="text-[10px] font-bold text-art-500 uppercase tracking-wider block">
+                Live Storefront Social Bar Preview:
+              </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                {socialLinks.instagram && (
+                  <a
+                    href={socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-art-800 text-xs font-bold text-rose-600 shadow-xs hover:scale-105 transition-transform"
+                  >
+                    <Instagram className="w-3.5 h-3.5" />
+                    <span>{socialLinks.instagramHandle || 'Instagram'}</span>
+                  </a>
+                )}
+                {socialLinks.youtube && (
+                  <a
+                    href={socialLinks.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-art-800 text-xs font-bold text-red-600 shadow-xs hover:scale-105 transition-transform"
+                  >
+                    <Youtube className="w-3.5 h-3.5" />
+                    <span>YouTube</span>
+                  </a>
+                )}
+                {socialLinks.pinterest && (
+                  <a
+                    href={socialLinks.pinterest}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-art-800 text-xs font-bold text-rose-700 shadow-xs hover:scale-105 transition-transform"
+                  >
+                    <PinIcon className="w-3.5 h-3.5" />
+                    <span>Pinterest</span>
+                  </a>
+                )}
+                {socialLinks.whatsappCommunity && (
+                  <a
+                    href={socialLinks.whatsappCommunity}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow-xs hover:scale-105 transition-transform"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>VIP Community</span>
+                  </a>
+                )}
               </div>
             </div>
           </div>

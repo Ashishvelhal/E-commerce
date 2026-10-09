@@ -31,6 +31,18 @@ export interface ISmtpConfig {
   enabled?: boolean;
 }
 
+export interface ISocialLinks {
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
+  pinterest?: string;
+  twitter?: string;
+  whatsappCommunity?: string;
+  linkedin?: string;
+  instagramHandle?: string;
+  showSocialFeed?: boolean;
+}
+
 export interface ISetting extends Document {
   key: string;
   storeName: string;
@@ -41,6 +53,7 @@ export interface ISetting extends Document {
   customMailboxes?: ICustomMailbox[];
   emailTemplates?: IEmailTemplates;
   smtpConfig?: ISmtpConfig;
+  socialLinks?: ISocialLinks;
   whatsappNumber: string;
   whatsappCheckoutEnabled: boolean;
   whatsappCustomMessage: string;
@@ -168,6 +181,20 @@ const SettingSchema = new Schema<ISetting>(
         senderName: 'Rasin Arts Luxury 3D Studio',
         senderEmail: 'support@rasinarts.com',
         enabled: false,
+      },
+    },
+    socialLinks: {
+      type: Schema.Types.Mixed,
+      default: {
+        instagram: 'https://instagram.com/rasinarts',
+        facebook: 'https://facebook.com/rasinarts',
+        youtube: 'https://youtube.com/@rasinarts',
+        pinterest: 'https://pinterest.com/rasinarts',
+        twitter: 'https://twitter.com/rasinarts',
+        whatsappCommunity: 'https://chat.whatsapp.com/rasinarts',
+        linkedin: '',
+        instagramHandle: '@rasinarts.studio',
+        showSocialFeed: true,
       },
     },
     whatsappNumber: {
