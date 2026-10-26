@@ -51,6 +51,9 @@ export interface Product {
   richDetails?: string;
   price: number;
   discountPrice?: number;
+  costPrice?: number;
+  minBargainPrice?: number;
+  recipeId?: string;
   category: string;
   brand?: string;
   stock: number;
@@ -104,6 +107,20 @@ export interface ShippingAddress {
   email?: string;
 }
 
+export interface OrderItem {
+  product: Product | string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+  selectedColor?: string;
+  isBargained?: boolean;
+  originalPrice?: number;
+  soldPrice?: number;
+  costPrice?: number;
+  profit?: number;
+}
+
 export interface Order {
   _id: string;
   user?: {
@@ -114,20 +131,16 @@ export interface Order {
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
-  orderItems: {
-    product: Product | string;
-    name: string;
-    quantity: number;
-    price: number;
-    image: string;
-    selectedColor?: string;
-  }[];
+  orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   itemsPrice: number;
   taxPrice: number;
   shippingPrice: number;
   totalPrice: number;
+  hasBargain?: boolean;
+  totalCost?: number;
+  totalProfit?: number;
   isPaid: boolean;
   paidAt?: string;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
@@ -273,5 +286,190 @@ export interface BulkInquiry {
   createdAt: string;
   updatedAt: string;
 }
+
+export type StockMovementType =
+  | 'Purchase'
+  | 'Customer Order'
+  | 'Studio Production'
+  | 'Spillage / Damage'
+  | 'Audit Correction'
+  | 'Return';
+
+export interface StockMovement {
+  _id: string;
+  inventoryItem: string | InventoryItem;
+  itemName: string;
+  category: string;
+  movementType: StockMovementType;
+  quantityChange: number;
+  previousStock: number;
+  newStock: number;
+  unit: string;
+  referenceId?: string;
+  performedBy?: string;
+  notes?: string;
+  costImpact?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Supplier {
+  _id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  city?: string;
+  gstNumber?: string;
+  leadTimeDays: number;
+  paymentTerms: string;
+  suppliedCategories: string[];
+  notes?: string;
+  rating?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PurchaseOrderItem {
+  inventoryItem?: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  receivedQuantity?: number;
+}
+
+export interface PurchaseOrder {
+  _id: string;
+  poNumber: string;
+  supplier: string | Supplier;
+  supplierName: string;
+  items: PurchaseOrderItem[];
+  subtotal: number;
+  taxAmount: number;
+  shippingCost: number;
+  grandTotal: number;
+  status: 'Draft' | 'Sent' | 'Partially Received' | 'Received' | 'Cancelled';
+  expectedDeliveryDate?: string;
+  receivedAt?: string;
+  notes?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeadStockProduct {
+  id: string;
+  title: string;
+  category: string;
+  thumbnail: string;
+  stock: number;
+  unitCost: number;
+  lockedCapital: number;
+  sellingPrice: number;
+  daysInactive: number;
+  status: string;
+  recommendation: string;
+}
+
+export interface DeadStockRawMaterial {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  unit: string;
+  costPerUnit: number;
+  lockedCapital: number;
+  daysInactive: number;
+  status: string;
+  recommendation: string;
+}
+
+export interface InventoryValuationData {
+  rawMaterialsCapital: number;
+  finishedGoodsCapital: number;
+  finishedGoodsRetailValue: number;
+  totalCombinedCapital: number;
+  rawCategoryValuation: Record<string, number>;
+}
+
+export interface DeadStockData {
+  totalLockedDeadCapital: number;
+  totalDeadProductsCount: number;
+  totalDeadRawMaterialsCount: number;
+  products: DeadStockProduct[];
+  rawMaterials: DeadStockRawMaterial[];
+}
+
+export interface InventoryValuationAndDeadStockResponse {
+  valuation: InventoryValuationData;
+  deadStock: DeadStockData;
+}
+
+export interface StallItemSold {
+  product?: string;
+  title: string;
+  category: string;
+  quantity: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+}
+
+export interface StallCustomerLead {
+  customerName: string;
+  customerPhone: string;
+  totalSpent: number;
+  orderId?: string;
+  purchasedAt: string;
+}
+
+export interface StallSession {
+  _id: string;
+  name: string;
+  location: string;
+  status: 'Active' | 'Closed';
+  startedAt: string;
+  closedAt?: string;
+  totalRevenue: number;
+  totalUpi: number;
+  totalCash: number;
+  totalCard: number;
+  totalProfit: number;
+  ordersCount: number;
+  itemsSold: StallItemSold[];
+  leads: StallCustomerLead[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StallSessionFinancial {
+  totalRevenue: number;
+  totalProfit: number;
+  profitMargin: number;
+  totalUpi: number;
+  upiShare: number;
+  totalCash: number;
+  cashShare: number;
+  totalCard: number;
+  cardShare: number;
+  ordersCount: number;
+  totalUnitsSold: number;
+}
+
+export interface StallSessionSummaryResponse {
+  session: StallSession;
+  financial: StallSessionFinancial;
+  topProducts: StallItemSold[];
+  categoryBreakdown: Record<string, { quantity: number; revenue: number }>;
+  leadsCount: number;
+  leads: StallCustomerLead[];
+}
+
+
 
 

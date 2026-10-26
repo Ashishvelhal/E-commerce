@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Layers, Image as ImageIcon,
   ShoppingCart, FileText, MessageSquare, Settings,
   Palette, ArrowLeft, LogOut, Warehouse, FlaskConical, Calculator,
-  BarChart3, X, Building2
+  BarChart3, X, Building2, Store
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAdminUIStore } from '../../store/useAdminUIStore';
@@ -34,6 +34,7 @@ export const AdminSidebar: React.FC = () => {
       title: 'STORE & CATALOG',
       items: [
         { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+        { name: 'Stall / Flea POS', path: '/admin/pos', icon: Store, badge: 'STALL' },
         { name: 'Products & 3D Art', path: '/admin/products', icon: Package },
         { name: 'Categories', path: '/admin/categories', icon: Layers },
         { name: 'Customer Orders', path: '/admin/orders', icon: ShoppingCart },

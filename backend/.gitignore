@@ -5,3 +5,7 @@ mongo-mem-*
 .rasin_arts_studio_data/
 uploads/temp/
 *.log
+.ts-node*
+.ts_cache/
+ts-node-dev-*
+*.tmp

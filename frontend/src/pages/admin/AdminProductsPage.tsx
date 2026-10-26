@@ -184,6 +184,31 @@ export const AdminProductsPage: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Admin Profitability & Cost Intelligence */}
+                    {product.costPrice !== undefined && product.costPrice > 0 && (
+                      <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                          Cost: ₹{product.costPrice.toFixed(0)}
+                        </span>
+                        {(() => {
+                          const effP = product.discountPrice || product.price;
+                          const prof = effP - product.costPrice;
+                          const m = effP > 0 ? (prof / effP) * 100 : 0;
+                          return (
+                            <span
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                m >= 30
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              +₹{prof.toFixed(0)} ({m.toFixed(0)}%)
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -266,6 +291,11 @@ export const AdminProductsPage: React.FC = () => {
                         {product.discountPrice && (
                           <span className="text-[10px] text-art-600 line-through block font-mono">
                             ₹{product.price.toFixed(2)}
+                          </span>
+                        )}
+                        {product.costPrice !== undefined && product.costPrice > 0 && (
+                          <span className="text-[10px] text-emerald-700 font-mono font-bold block mt-0.5">
+                            Cost: ₹{product.costPrice.toFixed(0)} (Profit: +₹{((product.discountPrice || product.price) - product.costPrice).toFixed(0)})
                           </span>
                         )}
                       </td>

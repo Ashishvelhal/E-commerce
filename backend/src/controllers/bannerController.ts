@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Banner } from '../models/Banner';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 // @desc    Get all active banners for storefront
 // @route   GET /api/banners
@@ -44,19 +45,41 @@ export const getAllBanners = async (req: Request, res: Response): Promise<void> 
 // @access  Private/Admin
 export const createBanner = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, subtitle, badge, image, linkUrl, buttonText, position, isActive, order } =
-      req.body;
+    const validation = validatePayload(req.body, [
+      {
+        field: 'title',
+        label: 'Banner Title',
+        type: 'string',
+        min: 2,
+        customErrorMessage: 'Banner headline title is required and must be at least 2 characters.',
+      },
+      {
+        field: 'image',
+        label: 'Banner Image',
+        type: 'string',
+        min: 5,
+        customErrorMessage: 'Banner image URL is required (valid media URL or image path).',
+      },
+    ]);
 
-    if (!title || !image) {
-      res.status(400).json({ success: false, message: 'Title and image URL are required' });
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
       return;
     }
 
+    const { title, subtitle, badge, image, linkUrl, buttonText, position, isActive, order } =
+      req.body;
+
     const banner = await Banner.create({
-      title,
+      title: title.trim(),
       subtitle: subtitle || '',
       badge: badge || '',
-      image,
+      image: image.trim(),
       linkUrl: linkUrl || '/shop',
       buttonText: buttonText || 'Explore Collection',
       position: position || 'hero',
@@ -85,7 +108,7 @@ export const updateBanner = async (req: Request, res: Response): Promise<void> =
     });
 
     if (!banner) {
-      res.status(404).json({ success: false, message: 'Banner not found' });
+      sendNotFound(res, 'Banner', req.params.id);
       return;
     }
 
@@ -106,7 +129,7 @@ export const deleteBanner = async (req: Request, res: Response): Promise<void> =
   try {
     const banner = await Banner.findByIdAndDelete(req.params.id);
     if (!banner) {
-      res.status(404).json({ success: false, message: 'Banner not found' });
+      sendNotFound(res, 'Banner', req.params.id);
       return;
     }
     res.json({ success: true, message: 'Banner deleted successfully' });

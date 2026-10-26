@@ -13,6 +13,11 @@ const OrderItemSchema = new Schema(
     price: { type: Number, required: true },
     image: { type: String, required: true },
     selectedColor: { type: String, default: '' },
+    isBargained: { type: Boolean, default: false },
+    originalPrice: { type: Number },
+    soldPrice: { type: Number },
+    costPrice: { type: Number, default: 0 },
+    profit: { type: Number, default: 0 },
   },
   { _id: false }
 );
@@ -67,6 +72,9 @@ const OrderSchema = new Schema<IOrder>(
     taxPrice: { type: Number, required: true, default: 0.0 },
     shippingPrice: { type: Number, required: true, default: 0.0 },
     totalPrice: { type: Number, required: true, default: 0.0 },
+    hasBargain: { type: Boolean, default: false },
+    totalCost: { type: Number, default: 0.0 },
+    totalProfit: { type: Number, default: 0.0 },
     isPaid: { type: Boolean, required: true, default: true },
     paidAt: { type: Date, default: Date.now },
     status: {

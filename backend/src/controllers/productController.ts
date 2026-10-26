@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/Product';
 import { Category } from '../models/Category';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 // Helper to escape regex special characters
 const escapeRegex = (text: string) => {
@@ -139,7 +140,7 @@ export const getProductByIdentifier = async (req: Request, res: Response): Promi
     }
 
     if (!product) {
-      res.status(404).json({ success: false, message: 'Product not found' });
+      sendNotFound(res, 'Product', identifier);
       return;
     }
 
@@ -154,12 +155,31 @@ export const getProductByIdentifier = async (req: Request, res: Response): Promi
 // @access  Private/Admin
 export const createProduct = async (req: Request, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      { field: 'title', label: 'Product Title', type: 'string', min: 2, customErrorMessage: 'Product title is required and must be at least 2 characters.' },
+      { field: 'price', label: 'Base Price', type: 'number', min: 1, customErrorMessage: 'Base price is required and must be greater than 0.' },
+      { field: 'category', label: 'Category', type: 'string', min: 2, customErrorMessage: 'Product category is required (e.g., "Wall Clocks", "Keychains", "Nameplates").' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const {
       title,
       description,
       richDetails,
       price,
       discountPrice,
+      costPrice,
+      minBargainPrice,
+      recipeId,
       category,
       brand,
       stock,
@@ -181,13 +201,16 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
     const product = await Product.create({
       title,
       slug,
-      description,
-      richDetails,
+      description: description || '',
+      richDetails: richDetails || '',
       price: Number(price),
       discountPrice: discountPrice ? Number(discountPrice) : undefined,
+      costPrice: costPrice !== undefined ? Math.max(0, Number(costPrice)) : 0,
+      minBargainPrice: minBargainPrice ? Math.max(0, Number(minBargainPrice)) : undefined,
+      recipeId: recipeId || null,
       category,
       brand: brand || 'Rasin Arts',
-      stock: Number(stock),
+      stock: stock !== undefined ? Math.max(0, Number(stock)) : 0,
       images: Array.isArray(images) && images.length > 0 ? images : [thumbnail || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=60'],
       thumbnail: thumbnail || (images && images[0]) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=60',
       model3d: model3d && model3d.url ? model3d : null,
@@ -215,7 +238,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
     let product = await Product.findById(id);
 
     if (!product) {
-      res.status(404).json({ success: false, message: 'Product not found' });
+      sendNotFound(res, 'Product', id);
       return;
     }
 
@@ -284,16 +307,29 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
 // @access  Private/Admin
 export const createCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, image, icon } = req.body;
-    if (!name) {
-      res.status(400).json({ success: false, message: 'Category name is required' });
+    const validation = validatePayload(req.body, [
+      { field: 'name', label: 'Category Name', type: 'string', min: 2, customErrorMessage: 'Category name is required and must be at least 2 characters long.' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
       return;
     }
 
+    const { name, description, image, icon } = req.body;
     const slug = slugify(name);
     const existing = await Category.findOne({ slug });
     if (existing) {
-      res.status(400).json({ success: false, message: 'Category with this name already exists' });
+      sendValidationError(res, {
+        message: `A category with the name "${name}" already exists.`,
+        fieldErrors: { name: `"${name}" is already taken.` },
+        actionableSuggestion: 'Please enter a different category name or update the existing category.',
+      });
       return;
     }
 
@@ -327,7 +363,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
 
     const category = await Category.findByIdAndUpdate(id, req.body, { new: true });
     if (!category) {
-      res.status(404).json({ success: false, message: 'Category not found' });
+      sendNotFound(res, 'Category', id);
       return;
     }
 
@@ -349,7 +385,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
     const { id } = req.params;
     const category = await Category.findByIdAndDelete(id);
     if (!category) {
-      res.status(404).json({ success: false, message: 'Category not found' });
+      sendNotFound(res, 'Category', id);
       return;
     }
 

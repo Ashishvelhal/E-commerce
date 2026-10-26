@@ -52,6 +52,9 @@ export interface IProduct extends Document {
   richDetails?: string;
   price: number;
   discountPrice?: number;
+  costPrice?: number;
+  minBargainPrice?: number;
+  recipeId?: Types.ObjectId;
   category: string;
   brand?: string;
   stock: number;
@@ -92,6 +95,11 @@ export interface IOrderItem {
   price: number;
   image: string;
   selectedColor?: string;
+  isBargained?: boolean;
+  originalPrice?: number;
+  soldPrice?: number;
+  costPrice?: number;
+  profit?: number;
 }
 
 export interface IShippingAddress {
@@ -124,6 +132,9 @@ export interface IOrder extends Document {
   taxPrice: number;
   shippingPrice: number;
   totalPrice: number;
+  hasBargain?: boolean;
+  totalCost?: number;
+  totalProfit?: number;
   isPaid: boolean;
   paidAt?: Date;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';

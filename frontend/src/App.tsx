@@ -87,6 +87,9 @@ const AdminResinCalculatorPage = lazy(() =>
 const AdminPricingCalculatorPage = lazy(() =>
   import('./pages/admin/AdminPricingCalculatorPage').then((m) => ({ default: m.AdminPricingCalculatorPage }))
 );
+const AdminStallPOSPage = lazy(() =>
+  import('./pages/admin/AdminStallPOSPage').then((m) => ({ default: m.AdminStallPOSPage }))
+);
 
 const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const IDLE_WARNING_MS = 2 * 60 * 1000;
@@ -263,6 +266,7 @@ export function App() {
         <Route path="/admin/categories" element={<AdminLayout><AdminCategoriesPage /></AdminLayout>} />
         <Route path="/admin/banners" element={<AdminLayout><AdminBannersPage /></AdminLayout>} />
         <Route path="/admin/orders" element={<AdminLayout><AdminOrdersPage /></AdminLayout>} />
+        <Route path="/admin/pos" element={<AdminLayout><AdminStallPOSPage /></AdminLayout>} />
         <Route path="/admin/bulk-inquiries" element={<AdminLayout><AdminBulkInquiriesPage /></AdminLayout>} />
         <Route path="/admin/inventory" element={<AdminLayout><AdminInventoryPage /></AdminLayout>} />
         <Route path="/admin/resin-calculator" element={<AdminLayout><AdminResinCalculatorPage /></AdminLayout>} />

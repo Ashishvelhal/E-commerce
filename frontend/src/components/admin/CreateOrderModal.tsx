@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Plus, Trash2, Search, ShoppingBag, User, Phone,
   MapPin, CreditCard, CheckCircle2, Loader2, Package,
+  TrendingUp, AlertCircle, Tag, Handshake, ShieldAlert
 } from 'lucide-react';
 import { Product } from '../../types';
 import { useToastStore } from '../../store/useToastStore';
@@ -14,6 +15,12 @@ interface OrderItem {
   quantity: number;
   price: number;
   image: string;
+  costPrice: number;
+  minBargainPrice?: number;
+  isBargained: boolean;
+  bargainedPrice: number;
+  soldPrice: number;
+  profit: number;
 }
 
 interface CreateOrderModalProps {
@@ -50,7 +57,11 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const [searchLoading,   setSearchLoading]   = useState(false);
   const [orderItems,      setOrderItems]      = useState<OrderItem[]>([]);
 
-  const itemsPrice = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const itemsPrice = orderItems.reduce((s, i) => s + i.soldPrice * i.quantity, 0);
+  const totalCost = orderItems.reduce((s, i) => s + i.costPrice * i.quantity, 0);
+  const totalProfit = itemsPrice - totalCost;
+  const totalBargainSavings = orderItems.reduce((s, i) => i.isBargained ? s + Math.max(0, i.price - i.soldPrice) * i.quantity : s, 0);
+  const overallMargin = itemsPrice > 0 ? (totalProfit / itemsPrice) * 100 : 0;
   const totalPrice = itemsPrice + shippingPrice;
 
   useEffect(() => {
@@ -77,20 +88,37 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   }, [productSearch]);
 
   const addItem = (product: Product) => {
+    const catalogPrice = product.discountPrice || product.price;
+    const unitCost = product.costPrice || 0;
+    const floorPrice = product.minBargainPrice || undefined;
+
     setOrderItems(prev => {
       const exists = prev.find(i => i.product === product._id);
       if (exists) {
-        return prev.map(i => i.product === product._id
-          ? { ...i, quantity: i.quantity + 1 }
-          : i
-        );
+        return prev.map(i => {
+          if (i.product === product._id) {
+            const newQty = i.quantity + 1;
+            return {
+              ...i,
+              quantity: newQty,
+              profit: (i.soldPrice - i.costPrice) * newQty,
+            };
+          }
+          return i;
+        });
       }
       return [...prev, {
         product: product._id,
         name:     product.title,
         quantity: 1,
-        price:    product.discountPrice || product.price,
+        price:    catalogPrice,
         image:    product.thumbnail,
+        costPrice: unitCost,
+        minBargainPrice: floorPrice,
+        isBargained: false,
+        bargainedPrice: catalogPrice,
+        soldPrice: catalogPrice,
+        profit: (catalogPrice - unitCost) * 1,
       }];
     });
     setProductSearch('');
@@ -102,7 +130,42 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   const changeQty = (productId: string, qty: number) => {
     if (qty < 1) { removeItem(productId); return; }
-    setOrderItems(prev => prev.map(i => i.product === productId ? { ...i, quantity: qty } : i));
+    setOrderItems(prev => prev.map(i => i.product === productId ? {
+      ...i,
+      quantity: qty,
+      profit: (i.soldPrice - i.costPrice) * qty,
+    } : i));
+  };
+
+  const toggleBargain = (productId: string, isBargained: boolean) => {
+    setOrderItems(prev => prev.map(i => {
+      if (i.product === productId) {
+        const effectiveSoldPrice = isBargained ? i.bargainedPrice : i.price;
+        return {
+          ...i,
+          isBargained,
+          soldPrice: effectiveSoldPrice,
+          profit: (effectiveSoldPrice - i.costPrice) * i.quantity,
+        };
+      }
+      return i;
+    }));
+  };
+
+  const changeBargainedPrice = (productId: string, newBargainedPrice: number) => {
+    const validPrice = Math.max(0, isNaN(newBargainedPrice) ? 0 : newBargainedPrice);
+    setOrderItems(prev => prev.map(i => {
+      if (i.product === productId) {
+        const effectiveSoldPrice = i.isBargained ? validPrice : i.price;
+        return {
+          ...i,
+          bargainedPrice: validPrice,
+          soldPrice: effectiveSoldPrice,
+          profit: (effectiveSoldPrice - i.costPrice) * i.quantity,
+        };
+      }
+      return i;
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +185,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       await api.post('/orders/admin', {
         customerName, customerPhone, customerEmail,
         shippingAddress: { street, city, state, postalCode, country },
-        orderItems,
+        orderItems: orderItems.map(item => ({
+          product: item.product,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.soldPrice,
+          soldPrice: item.soldPrice,
+          originalPrice: item.price,
+          costPrice: item.costPrice,
+          profit: item.profit,
+          isBargained: item.isBargained,
+          image: item.image,
+        })),
         paymentMethod,
         status: orderStatus,
         trackingNumber,
@@ -131,7 +205,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         shippingPrice,
         totalPrice,
       });
-      addToast('Order created and saved successfully!', 'success');
+      addToast('Order created and saved successfully with profit metrics!', 'success');
       onCreated();
       onClose();
     } catch (err: any) {
@@ -327,35 +401,188 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                     No items added yet — search and select products above
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {orderItems.map(item => (
-                      <div key={item.product} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-white border border-art-800 rounded-xl shadow-sm">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover border border-art-800 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold text-art-300 truncate">{item.name}</div>
-                            <div className="text-[11px] text-brand-700 font-bold font-mono">₹{item.price.toFixed(0)} each</div>
-                          </div>
-                        </div>
+                  <div className="space-y-3">
+                    {orderItems.map((item) => {
+                      const itemProfitPerPiece = item.soldPrice - item.costPrice;
+                      const totalLineProfit = itemProfitPerPiece * item.quantity;
+                      const marginPct = item.soldPrice > 0 ? (itemProfitPerPiece / item.soldPrice) * 100 : 0;
+                      const isHealthy = marginPct >= 30;
+                      const isWarning = marginPct < 15;
 
-                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-art-800/40">
-                          <div className="flex items-center gap-1.5">
-                            <button type="button" onClick={() => changeQty(item.product, item.quantity - 1)}
-                              className="w-7 h-7 rounded-lg bg-art-950 border border-art-800 text-art-400 flex items-center justify-center hover:bg-art-900 transition-all text-sm font-bold">−</button>
-                            <span className="w-7 text-center text-xs font-bold text-art-300">{item.quantity}</span>
-                            <button type="button" onClick={() => changeQty(item.product, item.quantity + 1)}
-                              className="w-7 h-7 rounded-lg bg-art-950 border border-art-800 text-art-400 flex items-center justify-center hover:bg-art-900 transition-all text-sm font-bold">+</button>
+                      return (
+                        <div
+                          key={item.product}
+                          className="p-3.5 bg-white border border-art-800 rounded-2xl shadow-xs space-y-3 transition-all hover:border-brand-200"
+                        >
+                          {/* Row 1: Item Info, Quantity Stepper, Line Total, Trash */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-12 h-12 rounded-xl object-cover border border-art-800 shrink-0 shadow-xs"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold text-art-300 truncate">{item.name}</div>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-[11px] text-art-500 font-medium">
+                                    Catalog: <span className="font-mono font-bold text-art-400">₹{item.price.toFixed(0)}</span>
+                                  </span>
+                                  {item.costPrice > 0 && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-semibold border border-slate-200">
+                                      COGS Cost: ₹{item.costPrice.toFixed(0)}
+                                    </span>
+                                  )}
+                                  {item.minBargainPrice && item.minBargainPrice > 0 && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-mono font-semibold border border-purple-200">
+                                      Min Deal Floor: ₹{item.minBargainPrice.toFixed(0)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-art-800/40">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => changeQty(item.product, item.quantity - 1)}
+                                  className="w-7 h-7 rounded-lg bg-art-950 border border-art-800 text-art-400 flex items-center justify-center hover:bg-art-900 transition-all text-sm font-bold"
+                                >
+                                  −
+                                </button>
+                                <span className="w-7 text-center text-xs font-bold text-art-300">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => changeQty(item.product, item.quantity + 1)}
+                                  className="w-7 h-7 rounded-lg bg-art-950 border border-art-800 text-art-400 flex items-center justify-center hover:bg-art-900 transition-all text-sm font-bold"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <div className="text-right">
+                                <div className="text-[10px] text-art-500 uppercase font-semibold">Subtotal</div>
+                                <div className="text-xs font-black text-brand-700 font-mono">
+                                  ₹{(item.soldPrice * item.quantity).toFixed(0)}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeItem(item.product)}
+                                className="p-1.5 rounded-lg text-art-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                title="Remove item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-xs font-black text-art-300 font-mono w-16 sm:w-20 text-right">
-                            ₹{(item.price * item.quantity).toFixed(0)}
+
+                          {/* Row 2: Bargain Toggle Switch & Real-time Margin Intelligence */}
+                          <div className="p-3 rounded-xl bg-art-950 border border-art-800 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                              {/* Toggle: Without Bargain vs With Bargain */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold text-art-400 uppercase tracking-wider flex items-center gap-1">
+                                  Sale Mode:
+                                </span>
+                                <div className="inline-flex rounded-xl bg-white border border-art-800 p-0.5 text-xs shadow-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleBargain(item.product, false)}
+                                    className={`px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all flex items-center gap-1.5 ${
+                                      !item.isBargained
+                                        ? 'bg-slate-900 text-white shadow-xs'
+                                        : 'text-art-500 hover:text-art-300'
+                                    }`}
+                                  >
+                                    <Tag className="w-3 h-3" />
+                                    <span>Without Bargain (Standard)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleBargain(item.product, true)}
+                                    className={`px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all flex items-center gap-1.5 ${
+                                      item.isBargained
+                                        ? 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-xs glow-brand'
+                                        : 'text-art-500 hover:text-art-300'
+                                    }`}
+                                  >
+                                    <Handshake className="w-3 h-3" />
+                                    <span>With Bargain (Negotiated)</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Real-time Line Profit Badge */}
+                              <div className="self-start sm:self-auto">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono border ${
+                                    isHealthy
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : isWarning
+                                      ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  }`}
+                                  title={`Cost: ₹${(item.costPrice * item.quantity).toFixed(0)} | Revenue: ₹${(item.soldPrice * item.quantity).toFixed(0)}`}
+                                >
+                                  <TrendingUp className="w-3 h-3" />
+                                  <span>
+                                    Profit: {totalLineProfit >= 0 ? `+₹${totalLineProfit.toFixed(0)}` : `-₹${Math.abs(totalLineProfit).toFixed(0)}`}
+                                  </span>
+                                  <span className="opacity-80 font-medium">({marginPct.toFixed(1)}% margin)</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* If With Bargain is enabled: show bargained price input and negotiation feedback */}
+                            {item.isBargained && (
+                              <div className="pt-2.5 border-t border-art-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <label className="text-[11px] font-bold text-art-300 whitespace-nowrap flex items-center gap-1">
+                                    🤝 Bargained Sold Price (₹):
+                                  </label>
+                                  <div className="relative w-36">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="any"
+                                      value={item.bargainedPrice}
+                                      onChange={(e) => changeBargainedPrice(item.product, Number(e.target.value))}
+                                      className="w-full bg-white border border-brand-400 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                                      placeholder="Deal price..."
+                                    />
+                                  </div>
+
+                                  {item.price > item.soldPrice && (
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                      Discount Given: -₹{(item.price - item.soldPrice).toFixed(0)} (-{(((item.price - item.soldPrice) / item.price) * 100).toFixed(0)}%)
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Warning Badges */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {item.minBargainPrice && item.soldPrice < item.minBargainPrice && (
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                                      <AlertCircle className="w-3 h-3 shrink-0" />
+                                      <span>Below floor (₹{item.minBargainPrice.toFixed(0)})</span>
+                                    </div>
+                                  )}
+                                  {item.costPrice > 0 && item.soldPrice < item.costPrice && (
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-rose-800 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
+                                      <ShieldAlert className="w-3 h-3 shrink-0" />
+                                      <span>Loss: Selling below cost (₹{item.costPrice.toFixed(0)})!</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <button type="button" onClick={() => removeItem(item.product)}
-                            className="p-1.5 rounded-lg text-art-500 hover:text-rose-600 hover:bg-rose-50 transition-all">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </section>
@@ -410,20 +637,64 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 </div>
               </section>
               {orderItems.length > 0 && (
-                <div className="p-4 bg-art-950 rounded-2xl border border-art-800 space-y-2 text-xs">
-                  <div className="flex justify-between text-art-500">
-                    <span>Items Subtotal</span>
-                    <span className="font-bold text-art-300 font-mono">₹{itemsPrice.toFixed(0)}</span>
-                  </div>
-                  <div className="flex justify-between text-art-500">
-                    <span>Shipping</span>
-                    <span className="font-bold text-art-300 font-mono">
-                      {shippingPrice === 0 ? <span style={{ color: '#15803d' }}>FREE</span> : `₹${shippingPrice.toFixed(0)}`}
+                <div className="p-4 bg-gradient-to-br from-art-950 via-white to-brand-50/40 rounded-2xl border border-brand-200 shadow-sm space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-art-300 border-b border-art-800 pb-2">
+                    <span className="uppercase tracking-wider">Financial & Profitability Breakdown</span>
+                    <span className="text-[10px] text-brand-700 font-extrabold uppercase bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">
+                      Admin Insights
                     </span>
                   </div>
-                  <div className="flex justify-between font-black text-art-300 text-sm pt-2 border-t border-art-800">
-                    <span>Total Payable</span>
-                    <span className="text-brand-700 font-mono">₹{totalPrice.toFixed(0)}</span>
+
+                  <div className="flex justify-between text-art-500">
+                    <span>Catalog Items Subtotal:</span>
+                    <span className="font-bold text-art-300 font-mono">₹{orderItems.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(0)}</span>
+                  </div>
+
+                  {totalBargainSavings > 0 && (
+                    <div className="flex justify-between text-emerald-700 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Handshake className="w-3.5 h-3.5" />
+                        <span>Bargain Savings Given:</span>
+                      </span>
+                      <span className="font-bold font-mono">-₹{totalBargainSavings.toFixed(0)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-art-500">
+                    <span>Sold Subtotal:</span>
+                    <span className="font-bold text-art-300 font-mono">₹{itemsPrice.toFixed(0)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-art-500">
+                    <span>Shipping Fee:</span>
+                    <span className="font-bold text-art-300 font-mono">
+                      {shippingPrice === 0 ? <span className="text-emerald-700 font-bold">FREE</span> : `₹${shippingPrice.toFixed(0)}`}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-600 font-medium pt-1.5 border-t border-art-800">
+                    <span>Total Manufacturing Cost (COGS):</span>
+                    <span className="font-bold text-slate-800 font-mono">₹{totalCost.toFixed(0)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-700" />
+                      <span className="font-bold text-emerald-950">Total Net Profit:</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-sm font-black font-mono ${totalProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {totalProfit >= 0 ? `+₹${totalProfit.toFixed(0)}` : `-₹${Math.abs(totalProfit).toFixed(0)}`}
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-800 ml-1.5 font-mono">
+                        ({overallMargin.toFixed(1)}% margin)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center font-black text-art-300 text-sm pt-2 border-t border-art-800">
+                    <span>Total Payable by Customer:</span>
+                    <span className="text-base text-brand-700 font-mono">₹{totalPrice.toFixed(0)}</span>
                   </div>
                 </div>
               )}

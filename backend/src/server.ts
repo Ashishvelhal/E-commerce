@@ -20,6 +20,9 @@ import studioNoteRoutes from './routes/studioNoteRoutes';
 import recipeRoutes from './routes/recipeRoutes';
 import settingRoutes from './routes/settingRoutes';
 import bulkInquiryRoutes from './routes/bulkInquiryRoutes';
+import supplierRoutes from './routes/supplierRoutes';
+import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
+import stallPOSRoutes from './routes/stallPOSRoutes';
 
 dotenv.config();
 
@@ -101,6 +104,9 @@ app.use('/api/studio-notes', adminApiRateLimiter, studioNoteRoutes);
 app.use('/api/recipes', adminApiRateLimiter, recipeRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/bulk-inquiries', bulkInquiryRoutes);
+app.use('/api/suppliers', adminApiRateLimiter, supplierRoutes);
+app.use('/api/purchase-orders', adminApiRateLimiter, purchaseOrderRoutes);
+app.use('/api/stall-pos', adminApiRateLimiter, stallPOSRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

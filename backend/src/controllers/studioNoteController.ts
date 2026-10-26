@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { StudioNote } from '../models/StudioNote';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 // Smart auto-categorization based on text content
 export const detectCategory = (text: string): 'formula' | 'order_customization' | 'todo' | 'idea' | 'general' => {
@@ -76,12 +77,27 @@ const generateTitle = (text: string): string => {
 // @access  Private/Admin
 export const createStudioNote = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { content, title, category, priority, productType, rawResinGramsDeducted, materialCost, tags } = req.body;
+    const validation = validatePayload(req.body, [
+      {
+        field: 'content',
+        label: 'Note Content',
+        type: 'string',
+        min: 2,
+        customErrorMessage: 'Note content or voice transcript is required to create a studio note.',
+      },
+    ]);
 
-    if (!content || !content.trim()) {
-      res.status(400).json({ success: false, message: 'Note content is required' });
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
       return;
     }
+
+    const { content, title, category, priority, productType, rawResinGramsDeducted, materialCost, tags } = req.body;
 
     const autoCategory = category || detectCategory(content);
     const autoTitle = title || generateTitle(content);
@@ -159,7 +175,7 @@ export const getLatestStudioNote = async (_req: Request, res: Response): Promise
   try {
     const note = await StudioNote.findOne().sort({ createdAt: -1 });
     if (!note) {
-      res.status(404).json({ success: false, message: 'No studio notes found' });
+      sendNotFound(res, 'Studio Note', 'latest');
       return;
     }
 
@@ -181,7 +197,7 @@ export const toggleNoteComplete = async (req: Request, res: Response): Promise<v
     const note = await StudioNote.findById(id);
 
     if (!note) {
-      res.status(404).json({ success: false, message: 'Studio note not found' });
+      sendNotFound(res, 'Studio Note', id);
       return;
     }
 
@@ -207,7 +223,7 @@ export const toggleNotePin = async (req: Request, res: Response): Promise<void> 
     const note = await StudioNote.findById(id);
 
     if (!note) {
-      res.status(404).json({ success: false, message: 'Studio note not found' });
+      sendNotFound(res, 'Studio Note', id);
       return;
     }
 
@@ -234,7 +250,7 @@ export const updateStudioNote = async (req: Request, res: Response): Promise<voi
 
     const note = await StudioNote.findById(id);
     if (!note) {
-      res.status(404).json({ success: false, message: 'Studio note not found' });
+      sendNotFound(res, 'Studio Note', id);
       return;
     }
 
@@ -268,7 +284,7 @@ export const deleteStudioNote = async (req: Request, res: Response): Promise<voi
     const note = await StudioNote.findByIdAndDelete(id);
 
     if (!note) {
-      res.status(404).json({ success: false, message: 'Studio note not found' });
+      sendNotFound(res, 'Studio Note', id);
       return;
     }
 

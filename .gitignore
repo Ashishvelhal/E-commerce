@@ -31,3 +31,9 @@ Thumbs.db
 *.swp
 *.swo
 release/
+
+# ts-node & compiler cache
+.ts-node*
+.ts_cache/
+ts-node-dev-*
+*.tmp

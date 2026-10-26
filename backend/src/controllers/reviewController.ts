@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Review } from '../models/Review';
 import { Product } from '../models/Product';
 import { AuthRequest } from '../types';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 // @desc    Get reviews for a product
 // @route   GET /api/reviews/product/:productId
@@ -48,11 +49,45 @@ export const getAllReviews = async (req: Request, res: Response): Promise<void> 
 // @access  Public
 export const createReview = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      {
+        field: 'productId',
+        label: 'Product ID',
+        type: 'string',
+        customErrorMessage: 'Product ID is required to submit a review.',
+      },
+      {
+        field: 'rating',
+        label: 'Rating',
+        type: 'number',
+        min: 1,
+        max: 5,
+        customErrorMessage: 'Rating must be a number between 1 and 5 stars.',
+      },
+      {
+        field: 'comment',
+        label: 'Review Comment',
+        type: 'string',
+        min: 3,
+        customErrorMessage: 'Review comment is required and must be at least 3 characters.',
+      },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const { productId, rating, title, comment, customerName, modelAnnotation } = req.body;
 
     const product = await Product.findById(productId);
     if (!product) {
-      res.status(404).json({ success: false, message: 'Product not found' });
+      sendNotFound(res, 'Product', productId);
       return;
     }
 
@@ -62,8 +97,8 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
       customerAvatar: req.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
       product: productId,
       rating: Number(rating) || 5,
-      title,
-      comment,
+      title: title ? String(title).trim() : '',
+      comment: String(comment).trim(),
       modelAnnotation: modelAnnotation && modelAnnotation.point ? modelAnnotation : undefined,
       verifiedPurchase: true,
     });
@@ -85,7 +120,7 @@ export const deleteReview = async (req: Request, res: Response): Promise<void> =
   try {
     const review = await Review.findByIdAndDelete(req.params.id);
     if (!review) {
-      res.status(404).json({ success: false, message: 'Review not found' });
+      sendNotFound(res, 'Review', req.params.id);
       return;
     }
 

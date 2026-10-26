@@ -64,6 +64,21 @@ const ProductSchema = new Schema<IProduct>(
       type: Number,
       default: null,
     },
+    costPrice: {
+      type: Number,
+      default: 0,
+      min: [0, 'Cost price cannot be negative'],
+    },
+    minBargainPrice: {
+      type: Number,
+      default: null,
+      min: [0, 'Minimum bargain price cannot be negative'],
+    },
+    recipeId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Recipe',
+      default: null,
+    },
     category: {
       type: String,
       required: [true, 'Category is required'],

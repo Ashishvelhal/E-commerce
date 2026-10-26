@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Plus, Trash2, Box, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Box, CheckCircle2, Image as ImageIcon, TrendingUp, AlertCircle, ShieldCheck, Tag, Handshake, DollarSign, BookOpen } from 'lucide-react';
 import { Product, Specification, ModelColorVariant } from '../../types';
 import { useToastStore } from '../../store/useToastStore';
 import api from '../../services/api';
@@ -42,6 +42,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [richDetails, setRichDetails] = useState('');
   const [price, setPrice] = useState('');
   const [discountPrice, setDiscountPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
+  const [minBargainPrice, setMinBargainPrice] = useState('');
+  const [recipeId, setRecipeId] = useState('');
+  const [recipesList, setRecipesList] = useState<{ _id: string; name: string; productType: string }[]>([]);
   const [category, setCategory] = useState('Pooja Thalis & Platters');
   const [brand, setBrand] = useState('Rasin Arts Studio');
   const [stock, setStock] = useState('20');
@@ -66,18 +70,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [newSpecValue, setNewSpecValue] = useState('');
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadData = async () => {
       try {
-        const res = await api.get('/products/categories');
-        const backendNames: string[] = res.data.data?.names || [];
+        const [catRes, recipeRes] = await Promise.all([
+          api.get('/products/categories'),
+          api.get('/recipes'),
+        ]);
+        const backendNames: string[] = catRes.data.data?.names || [];
         const combined = Array.from(new Set([...DEFAULT_RESIN_CATEGORIES, ...backendNames]));
         setCategoryList(combined);
+        setRecipesList(recipeRes.data.data || []);
       } catch (e) {
         setCategoryList(DEFAULT_RESIN_CATEGORIES);
       }
     };
     if (isOpen) {
-      loadCategories();
+      loadData();
     }
   }, [isOpen]);
 
@@ -91,6 +99,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setRichDetails(product.richDetails || '');
       setPrice(product.price.toString());
       setDiscountPrice(product.discountPrice ? product.discountPrice.toString() : '');
+      setCostPrice(product.costPrice !== undefined ? product.costPrice.toString() : '');
+      setMinBargainPrice(product.minBargainPrice !== undefined && product.minBargainPrice !== null ? product.minBargainPrice.toString() : '');
+      setRecipeId(product.recipeId || '');
       setCategory(product.category || 'Pooja Thalis & Platters');
       setBrand(product.brand || 'Rasin Arts Studio');
       setStock(product.stock.toString());
@@ -118,6 +129,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setRichDetails('');
       setPrice('2299.00');
       setDiscountPrice('1999.00');
+      setCostPrice('850.00');
+      setMinBargainPrice('1600.00');
+      setRecipeId('');
       setCategory('Pooja Thalis & Platters');
       setBrand('Rasin Arts Studio');
       setStock('15');
@@ -210,6 +224,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       richDetails: richDetails.trim(),
       price: parseFloat(price),
       discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
+      costPrice: costPrice ? parseFloat(costPrice) : 0,
+      minBargainPrice: minBargainPrice ? parseFloat(minBargainPrice) : undefined,
+      recipeId: recipeId || null,
       category,
       brand,
       stock: parseInt(stock, 10),
@@ -357,7 +374,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-art-400 mb-1">Price (₹) *</label>
+                <label className="block text-xs font-semibold text-art-400 mb-1">Catalog Price (₹) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -370,7 +387,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-art-400 mb-1">Discount Price (₹)</label>
+                <label className="block text-xs font-semibold text-art-400 mb-1">Sale / Discount Price (₹)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -379,6 +396,181 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   placeholder="Optional sale price"
                   className="w-full bg-white border border-art-700 rounded-xl px-3.5 py-2.5 text-xs text-art-300 focus:outline-none focus:border-brand-500 font-mono"
                 />
+              </div>
+
+              {/* Admin-only Cost Price (COGS) & Bargain Floor */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/5 via-brand-500/5 to-rose-500/5 border border-brand-200/70 sm:col-span-2 space-y-3">
+                <div className="flex items-center justify-between border-b border-brand-200/50 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-brand-50 text-brand-700">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-art-300 flex items-center gap-1.5">
+                        Admin Profitability & Bargain Intelligence
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-md bg-brand-500 text-white font-extrabold tracking-wider">Confidential</span>
+                      </span>
+                      <p className="text-[10px] text-art-500">Visible only to admin. Powers live profit calculations during regular and bargained sales.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-art-400 mb-1 flex items-center gap-1">
+                      <span>Base Manufacturing Cost (COGS) (₹)</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={costPrice}
+                      onChange={(e) => setCostPrice(e.target.value)}
+                      placeholder="e.g. 650.00 (raw resin + labor)"
+                      className="w-full bg-white border border-brand-300 rounded-xl px-3.5 py-2 text-xs text-art-300 font-mono font-bold focus:outline-none focus:border-brand-500"
+                    />
+                    <span className="text-[10px] text-art-500 mt-0.5 block">Resin, pigment, inclusions & artisan labor</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-art-400 mb-1 flex items-center gap-1">
+                      <span>Minimum Bargain Floor Price (₹)</span>
+                      <span className="text-[10px] text-art-500 font-normal">(Optional floor)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={minBargainPrice}
+                      onChange={(e) => setMinBargainPrice(e.target.value)}
+                      placeholder="e.g. 1200.00 (lowest deal allowed)"
+                      className="w-full bg-white border border-brand-300 rounded-xl px-3.5 py-2 text-xs text-art-300 font-mono font-bold focus:outline-none focus:border-brand-500"
+                    />
+                    <span className="text-[10px] text-art-500 mt-0.5 block">Lowest price admin should negotiate down to</span>
+                  </div>
+                </div>
+
+                {/* Real-time Profit Preview Cards */}
+                {(() => {
+                  const numP = parseFloat(price) || 0;
+                  const numD = parseFloat(discountPrice) || 0;
+                  const numC = parseFloat(costPrice) || 0;
+                  const numB = parseFloat(minBargainPrice) || 0;
+
+                  const normProfit = numP - numC;
+                  const normMargin = numP > 0 ? (normProfit / numP) * 100 : 0;
+
+                  const effSalePrice = numD > 0 ? numD : numP;
+                  const effSaleProfit = effSalePrice - numC;
+                  const effSaleMargin = effSalePrice > 0 ? (effSaleProfit / effSalePrice) * 100 : 0;
+
+                  const bargProfit = numB > 0 ? numB - numC : null;
+                  const bargMargin = numB > 0 && bargProfit !== null ? (bargProfit / numB) * 100 : null;
+
+                  return (
+                    <div className="pt-2 space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                        {/* 1. Catalog Price Profit */}
+                        <div className={`p-2.5 rounded-xl border ${normProfit >= 0 ? 'bg-emerald-50/70 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                          <div className="text-[10px] font-bold text-slate-600 uppercase">Regular Sale Profit</div>
+                          <div className={`text-sm font-black font-mono ${normProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {normProfit >= 0 ? `+₹${normProfit.toFixed(0)}` : `-₹${Math.abs(normProfit).toFixed(0)}`}
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-500 mt-0.5">
+                            {normMargin.toFixed(1)}% margin
+                          </div>
+                        </div>
+
+                        {/* 2. Sale / Discount Profit */}
+                        <div className={`p-2.5 rounded-xl border ${numD > 0 ? (effSaleProfit >= 0 ? 'bg-brand-50/70 border-brand-200' : 'bg-rose-50 border-rose-200') : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                          <div className="text-[10px] font-bold text-slate-600 uppercase">Discount Sale Profit</div>
+                          <div className={`text-sm font-black font-mono ${numD > 0 ? (effSaleProfit >= 0 ? 'text-brand-700' : 'text-rose-700') : 'text-slate-500'}`}>
+                            {numD > 0 ? (effSaleProfit >= 0 ? `+₹${effSaleProfit.toFixed(0)}` : `-₹${Math.abs(effSaleProfit).toFixed(0)}`) : 'No Sale Price'}
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-500 mt-0.5">
+                            {numD > 0 ? `${effSaleMargin.toFixed(1)}% margin` : 'Standard applies'}
+                          </div>
+                        </div>
+
+                        {/* 3. Min Bargain Floor Profit */}
+                        <div className={`p-2.5 rounded-xl border ${numB > 0 ? (bargProfit! >= 0 ? 'bg-purple-50/70 border-purple-200' : 'bg-rose-50 border-rose-200') : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                          <div className="text-[10px] font-bold text-slate-600 uppercase">Min Bargain Profit</div>
+                          <div className={`text-sm font-black font-mono ${numB > 0 ? (bargProfit! >= 0 ? 'text-purple-700' : 'text-rose-700') : 'text-slate-500'}`}>
+                            {numB > 0 ? (bargProfit! >= 0 ? `+₹${bargProfit!.toFixed(0)}` : `-₹${Math.abs(bargProfit!).toFixed(0)}`) : 'No Floor Set'}
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-500 mt-0.5">
+                            {numB > 0 ? `${bargMargin!.toFixed(1)}% floor margin` : 'Flexible bargain'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {numC > 0 && numP < numC && (
+                        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Warning: Catalog price (₹{numP}) is lower than manufacturing cost (₹{numC})!</span>
+                        </div>
+                      )}
+                      {numC > 0 && numB > 0 && numB < numC && (
+                        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Warning: Minimum bargain price (₹{numB}) is below manufacturing cost (₹{numC})! Bargaining to this floor would result in a loss.</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* BOM Recipe Linkage */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-50/70 via-indigo-50/50 to-amber-50/50 border border-brand-200/80 sm:col-span-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-brand-500 text-white">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-art-300 flex items-center gap-1.5">
+                        Linked BOM Recipe (Automatic Raw Material Deduction)
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-extrabold tracking-wider border border-emerald-200">
+                          Auto-Sync
+                        </span>
+                      </span>
+                      <p className="text-[10px] text-art-500">
+                        When this finished product is sold online or created in admin orders, warehouse resin, pigments, molds, and boxes will be deducted automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <select
+                      value={recipeId}
+                      onChange={(e) => setRecipeId(e.target.value)}
+                      className="w-full bg-white border border-brand-300 rounded-xl px-3.5 py-2.5 text-xs text-art-300 font-semibold focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="">-- No Recipe Linked (Manual Raw Stock) --</option>
+                      {recipesList.map((rec) => (
+                        <option key={rec._id} value={rec._id}>
+                          {rec.name} ({rec.productType})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="text-[11px] text-art-600 flex items-center gap-1.5 bg-white/70 p-2 rounded-xl border border-brand-100">
+                    {recipeId ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        Active Link: Stock movements will log automatically upon customer or admin purchase.
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">
+                        Select a recipe to link raw materials to this product.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>

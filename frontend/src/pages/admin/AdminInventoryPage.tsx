@@ -3,13 +3,19 @@ import {
   Warehouse, Plus, Search, Filter, AlertTriangle, CheckCircle2,
   XCircle, Edit2, Trash2, ArrowUpDown, DollarSign, Package,
   Droplets, Sparkles, Box, RefreshCw, Layers, MapPin, Building2, Minus,
-  BookOpen, Clock, Thermometer, ShieldAlert, Check, Play, LayoutGrid, LayoutList
+  BookOpen, Clock, Thermometer, ShieldAlert, Check, Play, LayoutGrid, LayoutList,
+  History, Truck, PieChart, QrCode, Barcode
 } from 'lucide-react';
 import { InventoryItem, InventoryStats } from '../../types';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
 import { InventoryModal } from '../../components/admin/InventoryModal';
 import { WorkshopClimateWidget } from '../../components/admin/WorkshopClimateWidget';
 import { BatchCureWidget } from '../../components/admin/BatchCureWidget';
+import { QRCodeLabelModal } from '../../components/admin/QRCodeLabelModal';
+import { InventoryScannerModal } from '../../components/admin/InventoryScannerModal';
+import { StockMovementsTab } from '../../components/admin/StockMovementsTab';
+import { SuppliersAndPOTab } from '../../components/admin/SuppliersAndPOTab';
+import { InventoryAnalyticsTab } from '../../components/admin/InventoryAnalyticsTab';
 import { useToastStore } from '../../store/useToastStore';
 import { useRecipeStore, RecipeItem } from '../../store/useRecipeStore';
 import api from '../../services/api';
@@ -34,7 +40,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [activeTab, setActiveTab] = useState<'inventory' | 'recipes' | 'cure' | 'climate'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'movements' | 'suppliers' | 'analytics' | 'recipes' | 'cure' | 'climate'>('inventory');
   const [executingRecipeSlug, setExecutingRecipeSlug] = useState<string | null>(null);
 
   // Filters
@@ -46,6 +52,9 @@ export const AdminInventoryPage: React.FC = () => {
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [selectedQRItem, setSelectedQRItem] = useState<InventoryItem | null>(null);
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -184,6 +193,42 @@ export const AdminInventoryPage: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('movements')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                activeTab === 'movements'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-art-400 hover:text-art-300'
+              }`}
+            >
+              <History className="w-4 h-4 shrink-0" />
+              <span>Audit Movement Log</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('suppliers')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                activeTab === 'suppliers'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-art-400 hover:text-art-300'
+              }`}
+            >
+              <Truck className="w-4 h-4 shrink-0" />
+              <span>Suppliers & POs</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                activeTab === 'analytics'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-art-400 hover:text-art-300'
+              }`}
+            >
+              <PieChart className="w-4 h-4 shrink-0" />
+              <span>Capital & Dead Stock</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('recipes')}
               className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
                 activeTab === 'recipes'
@@ -224,6 +269,27 @@ export const AdminInventoryPage: React.FC = () => {
             Voice Sync: Say <span className="font-bold text-brand-700">"Hey Partner, started batch for clock"</span>
           </div>
         </div>
+
+        {/* AUDIT MOVEMENTS VIEW */}
+        {activeTab === 'movements' && (
+          <StockMovementsTab
+            inventoryItems={items}
+            onRefreshInventory={fetchInventory}
+          />
+        )}
+
+        {/* SUPPLIERS & PO VIEW */}
+        {activeTab === 'suppliers' && (
+          <SuppliersAndPOTab
+            inventoryItems={items}
+            onRefreshInventory={fetchInventory}
+          />
+        )}
+
+        {/* CAPITAL & DEAD STOCK ANALYTICS VIEW */}
+        {activeTab === 'analytics' && (
+          <InventoryAnalyticsTab />
+        )}
 
         {/* CURE TRACKER VIEW */}
         {activeTab === 'cure' && (
@@ -467,6 +533,27 @@ export const AdminInventoryPage: React.FC = () => {
                   </button>
 
                   <button
+                    onClick={() => setIsScannerModalOpen(true)}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition-all active:scale-95"
+                    title="Open live camera or handheld barcode stock scanner"
+                  >
+                    <Barcode className="w-4 h-4 shrink-0" />
+                    <span>Live Scanner</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedQRItem(null);
+                      setIsQRModalOpen(true);
+                    }}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-bold transition-all active:scale-95"
+                    title="Generate printable thermal QR/barcode stickers for bins & shelves"
+                  >
+                    <QrCode className="w-4 h-4 shrink-0 text-brand-600" />
+                    <span>Print Labels</span>
+                  </button>
+
+                  <button
                     onClick={fetchInventory}
                     className="p-2 sm:p-2.5 rounded-xl border border-art-800 bg-art-950 hover:bg-white text-art-500 transition-colors"
                     title="Refresh Inventory"
@@ -663,6 +750,17 @@ export const AdminInventoryPage: React.FC = () => {
                   <div className="pt-3 border-t border-art-800/60 flex items-center justify-end gap-2">
                     <button
                       onClick={() => {
+                        setSelectedQRItem(item);
+                        setIsQRModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors flex items-center gap-1 text-xs font-semibold px-2.5"
+                      title="Print QR / Barcode label"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Label</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         setEditingItem(item);
                         setIsModalOpen(true);
                       }}
@@ -839,6 +937,16 @@ export const AdminInventoryPage: React.FC = () => {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => {
+                                setSelectedQRItem(item);
+                                setIsQRModalOpen(true);
+                              }}
+                              className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors"
+                              title="Print QR / Barcode label"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
                                 setEditingItem(item);
                                 setIsModalOpen(true);
                               }}
@@ -868,7 +976,7 @@ export const AdminInventoryPage: React.FC = () => {
         )}
       </div>
 
-      {/* Add / Edit Modal */}
+      {/* Add / Edit Inventory Item Modal */}
       <InventoryModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -877,6 +985,25 @@ export const AdminInventoryPage: React.FC = () => {
         }}
         item={editingItem}
         onSaved={fetchInventory}
+      />
+
+      {/* QR Code & Barcode Printable Sticker Modal */}
+      <QRCodeLabelModal
+        isOpen={isQRModalOpen}
+        onClose={() => {
+          setIsQRModalOpen(false);
+          setSelectedQRItem(null);
+        }}
+        item={selectedQRItem}
+        allItems={items}
+      />
+
+      {/* Live Scanner & Handheld Barcode Modal */}
+      <InventoryScannerModal
+        isOpen={isScannerModalOpen}
+        onClose={() => setIsScannerModalOpen(false)}
+        inventoryItems={items}
+        onStockUpdated={fetchInventory}
       />
     </div>
   );

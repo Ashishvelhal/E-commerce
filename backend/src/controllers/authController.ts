@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { User } from '../models/User';
 import { AuthRequest } from '../types';
+import { sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 const loginSchema = z.object({
   email:    z.string().email('Invalid email format').max(254),
@@ -34,9 +35,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        message: parsed.error.errors[0].message,
+      const fieldErrors: Record<string, string> = {};
+      const missingFields: string[] = [];
+
+      parsed.error.errors.forEach((err) => {
+        const fieldName = err.path.join('.') || 'general';
+        fieldErrors[fieldName] = err.message;
+        if (!req.body || req.body[fieldName] === undefined || req.body[fieldName] === '') {
+          missingFields.push(fieldName);
+        }
+      });
+
+      sendValidationError(res, {
+        message: parsed.error.errors[0]?.message || 'Registration validation failed',
+        missingFields: missingFields.length > 0 ? missingFields : undefined,
+        fieldErrors,
+        actionableSuggestion: 'Please verify all required registration fields meet format requirements.',
       });
       return;
     }
@@ -45,7 +59,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
-      res.status(400).json({ success: false, message: 'An account with this email already exists' });
+      res.status(400).json({
+        success: false,
+        code: 'DUPLICATE_KEY',
+        message: 'An account with this email address already exists.',
+        fieldErrors: {
+          email: 'An account with this email already exists. Please log in instead or use another email.',
+        },
+        suggestion: 'Try logging in with this email or use a different email address to register.',
+      });
       return;
     }
 
@@ -182,13 +204,13 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
       return;
     }
 
     const user = await User.findById(req.user._id).select('+password');
     if (!user) {
-      res.status(404).json({ success: false, message: 'User not found' });
+      sendNotFound(res, 'User', String(req.user._id));
       return;
     }
 
@@ -199,7 +221,13 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
 
     if (req.body.password) {
       if (String(req.body.password).length < 8) {
-        res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        sendValidationError(res, {
+          message: 'Password must be at least 8 characters long.',
+          fieldErrors: {
+            password: 'Password must be at least 8 characters long with uppercase and numbers.',
+          },
+          actionableSuggestion: 'Provide a stronger password with at least 8 characters.',
+        });
         return;
       }
       user.password = req.body.password;

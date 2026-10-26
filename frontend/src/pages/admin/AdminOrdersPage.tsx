@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, Edit, Loader2, Search, Phone, MapPin, User, Package, Plus, ChevronLeft, ChevronRight, FileText, PackageCheck, LayoutGrid, LayoutList } from 'lucide-react';
+import { Truck, Edit, Loader2, Search, Phone, MapPin, User, Package, Plus, ChevronLeft, ChevronRight, FileText, PackageCheck, LayoutGrid, LayoutList, Handshake, TrendingUp, Tag } from 'lucide-react';
 import { Order } from '../../types';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
 import { OrderStatusModal } from '../../components/admin/OrderStatusModal';
@@ -144,7 +144,7 @@ export const AdminOrdersPage: React.FC = () => {
                     key={order._id}
                     className="p-5 rounded-3xl bg-white border border-art-800 shadow-sm hover:border-brand-300 transition-all flex flex-col justify-between space-y-4"
                   >
-                    {/* Header: ID + Status + Placed Time */}
+                    {/* Header: ID + Status + Bargain Badge + Placed Time */}
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -155,6 +155,15 @@ export const AdminOrdersPage: React.FC = () => {
                             {order.trackingNumber && (
                               <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-500/30">
                                 {order.trackingNumber}
+                              </span>
+                            )}
+                            {order.hasBargain || order.orderItems.some((i) => i.isBargained) ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-brand-600 to-rose-600 text-white flex items-center gap-1 shadow-xs">
+                                <Handshake className="w-3 h-3" /> Bargain Deal
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1 border border-slate-200">
+                                <Tag className="w-3 h-3" /> Standard
                               </span>
                             )}
                           </div>
@@ -194,9 +203,13 @@ export const AdminOrdersPage: React.FC = () => {
                           {order.orderItems.slice(0, 3).map((item, idx) => (
                             <span
                               key={idx}
-                              className="text-[10px] text-art-400 bg-art-950 px-2 py-0.5 rounded-md border border-art-800 truncate max-w-[180px]"
+                              className={`text-[10px] px-2 py-0.5 rounded-md border truncate max-w-[180px] ${
+                                item.isBargained
+                                  ? 'bg-rose-50/60 text-rose-800 border-rose-200 font-medium'
+                                  : 'text-art-400 bg-art-950 border-art-800'
+                              }`}
                             >
-                              {item.name} × {item.quantity}
+                              {item.name} × {item.quantity} {item.isBargained && '🤝'}
                             </span>
                           ))}
                           {order.orderItems.length > 3 && (
@@ -208,13 +221,20 @@ export const AdminOrdersPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Footer: Price + Actions */}
+                    {/* Footer: Price + Profit + Actions */}
                     <div className="pt-3 border-t border-art-800/60 flex items-center justify-between gap-2">
                       <div>
                         <div className="text-base font-black text-brand-700 font-mono">
                           {formatINR(order.totalPrice)}
                         </div>
-                        <div className="text-[10px] text-art-500">
+                        {order.totalProfit !== undefined && order.totalProfit > 0 && (
+                          <div className="flex items-center gap-1 text-[10px] font-bold font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                            <TrendingUp className="w-3 h-3" />
+                            <span>Profit: +₹{order.totalProfit.toFixed(0)}</span>
+                            <span className="opacity-80">({((order.totalProfit / (order.totalPrice || 1)) * 100).toFixed(0)}%)</span>
+                          </div>
+                        )}
+                        <div className="text-[10px] text-art-500 mt-0.5">
                           {order.paymentMethod || 'Online / Prepaid'}
                         </div>
                       </div>
@@ -259,10 +279,19 @@ export const AdminOrdersPage: React.FC = () => {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono text-art-500">
+                          <span className="text-xs font-mono text-art-500 font-bold">
                             #{order._id.slice(-10).toUpperCase()}
                           </span>
                           <StatusBadge type="order" status={order.status} size="sm" />
+                          {order.hasBargain || order.orderItems.some((i) => i.isBargained) ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-brand-600 to-rose-600 text-white flex items-center gap-1 shadow-xs">
+                              <Handshake className="w-3 h-3" /> Bargain Deal
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1 border border-slate-200">
+                              <Tag className="w-3 h-3" /> Standard
+                            </span>
+                          )}
                           {order.trackingNumber && (
                             <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-500/30">
                               {order.trackingNumber}
@@ -279,6 +308,13 @@ export const AdminOrdersPage: React.FC = () => {
                           <div className="text-base sm:text-lg font-black text-brand-700 font-mono">
                             {formatINR(order.totalPrice)}
                           </div>
+                          {order.totalProfit !== undefined && order.totalProfit > 0 && (
+                            <div className="inline-flex items-center gap-1 text-[10px] font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-0.5">
+                              <TrendingUp className="w-3 h-3" />
+                              <span>Profit: +₹{order.totalProfit.toFixed(0)}</span>
+                              <span className="opacity-80">({((order.totalProfit / (order.totalPrice || 1)) * 100).toFixed(0)}%)</span>
+                            </div>
+                          )}
                           <div className="text-[11px] text-art-500">
                             {order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}
                           </div>

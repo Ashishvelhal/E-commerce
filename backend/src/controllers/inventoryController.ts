@@ -1,5 +1,13 @@
 import { Request, Response } from 'express';
 import { Inventory } from '../models/Inventory';
+import { StockMovement } from '../models/StockMovement';
+import { Product } from '../models/Product';
+import { AuthRequest } from '../types';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
+
+const escapeRegex = (text: string) => {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
 
 // @desc    Get all inventory items with optional filters
 // @route   GET /api/inventory
@@ -21,11 +29,6 @@ export const getInventory = async (req: Request, res: Response): Promise<void> =
     if (lowStock === 'true') {
       query.$expr = { $lte: ['$currentStock', '$minStockAlert'] };
     }
-
-// Helper to escape regex special characters
-const escapeRegex = (text: string) => {
-  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
-};
 
     if (search && typeof search === 'string' && search.trim() !== '') {
       const term = escapeRegex(search.trim());
@@ -103,6 +106,23 @@ export const getInventoryStats = async (req: Request, res: Response): Promise<vo
 // @access  Private/Admin
 export const createInventoryItem = async (req: Request, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      { field: 'name', label: 'Material Name', type: 'string', min: 2, customErrorMessage: 'Material name is required.' },
+      { field: 'category', label: 'Category', type: 'string', min: 2, customErrorMessage: 'Category is required (e.g., "Resin & Hardener", "Pigments", "Hardware", "Molds").' },
+      { field: 'type', label: 'Type', type: 'string', min: 2, customErrorMessage: 'Material type is required.' },
+      { field: 'unit', label: 'Unit of Measure', type: 'string', min: 1, customErrorMessage: 'Unit is required (e.g., "g", "kg", "ml", "pcs").' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const {
       name,
       category,
@@ -116,11 +136,6 @@ export const createInventoryItem = async (req: Request, res: Response): Promise<
       location,
       notes,
     } = req.body;
-
-    if (!name || !category || !type || !unit) {
-      res.status(400).json({ success: false, message: 'Please provide all required fields' });
-      return;
-    }
 
     const costPerUnit =
       purchaseQuantity && Number(purchaseQuantity) > 0
@@ -161,7 +176,7 @@ export const updateInventoryItem = async (req: Request, res: Response): Promise<
 
     const existing = await Inventory.findById(id);
     if (!existing) {
-      res.status(404).json({ success: false, message: 'Inventory item not found' });
+      sendNotFound(res, 'Inventory item', id);
       return;
     }
 
@@ -205,30 +220,59 @@ export const updateInventoryItem = async (req: Request, res: Response): Promise<
   }
 };
 
-// @desc    Quick adjust stock quantity (+ / -)
+// @desc    Quick adjust stock quantity (+ / -) with automatic audit movement log
 // @route   PATCH /api/inventory/:id/stock
 // @access  Private/Admin
-export const quickAdjustStock = async (req: Request, res: Response): Promise<void> => {
+export const quickAdjustStock = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { delta, newStock } = req.body;
+    const { delta, newStock, movementType, notes, referenceId } = req.body;
 
     const item = await Inventory.findById(id);
     if (!item) {
-      res.status(404).json({ success: false, message: 'Inventory item not found' });
+      sendNotFound(res, 'Inventory item', id);
       return;
     }
 
+    const prevStock = item.currentStock;
+    let actualDelta = 0;
+
     if (newStock !== undefined) {
-      item.currentStock = Math.max(0, Number(newStock));
+      const target = Math.max(0, Number(newStock));
+      actualDelta = Number((target - prevStock).toFixed(2));
+      item.currentStock = target;
     } else if (delta !== undefined) {
-      item.currentStock = Math.max(0, item.currentStock + Number(delta));
+      actualDelta = Number(Number(delta).toFixed(2));
+      item.currentStock = Math.max(0, Number((prevStock + actualDelta).toFixed(2)));
     } else {
-      res.status(400).json({ success: false, message: 'Please provide delta or newStock value' });
+      sendValidationError(res, {
+        message: 'Missing adjustment parameter: Provide either "delta" (+/- quantity) or "newStock" (total count).',
+        missingFields: ['delta', 'newStock'],
+        actionableSuggestion: 'Provide a number for delta (e.g. { delta: 5 }) or newStock (e.g. { newStock: 100 }).',
+      });
       return;
     }
 
     const updated = await item.save();
+
+    // Automatically record movement audit log
+    if (actualDelta !== 0) {
+      const type = movementType || (actualDelta > 0 ? 'Purchase' : 'Audit Correction');
+      await StockMovement.create({
+        inventoryItem: item._id,
+        itemName: item.name,
+        category: item.category,
+        movementType: type,
+        quantityChange: actualDelta,
+        previousStock: prevStock,
+        newStock: item.currentStock,
+        unit: item.unit,
+        referenceId: referenceId || '',
+        performedBy: req.user?.name || 'Admin',
+        notes: notes || `Quick stock adjust: ${actualDelta > 0 ? '+' : ''}${actualDelta} ${item.unit}`,
+        costImpact: Number((Math.abs(actualDelta) * (item.costPerUnit || 0)).toFixed(2)),
+      });
+    }
 
     res.json({
       success: true,
@@ -249,7 +293,7 @@ export const deleteInventoryItem = async (req: Request, res: Response): Promise<
     const item = await Inventory.findByIdAndDelete(id);
 
     if (!item) {
-      res.status(404).json({ success: false, message: 'Inventory item not found' });
+      sendNotFound(res, 'Inventory item', id);
       return;
     }
 
@@ -262,18 +306,27 @@ export const deleteInventoryItem = async (req: Request, res: Response): Promise<
   }
 };
 
-// @desc    Automatically deduct resin & hardener stock for a workshop pour batch
+// @desc    Automatically deduct resin & hardener stock for a workshop pour batch and log movement
 // @route   POST /api/inventory/consume-batch
 // @access  Private/Admin
-export const consumeBatchStock = async (req: Request, res: Response): Promise<void> => {
+export const consumeBatchStock = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { totalGrams, ratioA = 2, ratioB = 1, productName, batchNotes } = req.body;
+    const validation = validatePayload(req.body, [
+      { field: 'totalGrams', label: 'Total Resin Weight (grams)', type: 'number', min: 1, customErrorMessage: 'Total resin weight in grams must be greater than 0.' },
+    ]);
 
-    const grams = Number(totalGrams);
-    if (!grams || grams <= 0) {
-      res.status(400).json({ success: false, message: 'Please specify a valid total resin weight in grams' });
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: 'Specify the total resin mix weight in grams (e.g., { totalGrams: 240 }).',
+      });
       return;
     }
+
+    const { totalGrams, ratioA = 2, ratioB = 1, productName, batchNotes } = req.body;
+    const grams = Number(totalGrams);
 
     const totalRatio = Number(ratioA) + Number(ratioB);
     const partAGrams = Number(((grams * Number(ratioA)) / totalRatio).toFixed(1));
@@ -287,25 +340,74 @@ export const consumeBatchStock = async (req: Request, res: Response): Promise<vo
 
     const deductedItems: any[] = [];
     const lowStockAlerts: string[] = [];
+    const performer = req.user?.name || 'Studio Admin';
 
     if (partAItem && partBItem && partAItem._id.toString() !== partBItem._id.toString()) {
-      // Deduct from separate Part A and Part B records
-      partAItem.currentStock = Math.max(0, partAItem.currentStock - partAGrams);
+      // Deduct Part A
+      const prevA = partAItem.currentStock;
+      partAItem.currentStock = Math.max(0, Number((prevA - partAGrams).toFixed(2)));
       await partAItem.save();
       deductedItems.push({ name: partAItem.name, deducted: partAGrams, unit: partAItem.unit, remaining: partAItem.currentStock });
       if (partAItem.currentStock <= partAItem.minStockAlert) lowStockAlerts.push(partAItem.name);
 
-      partBItem.currentStock = Math.max(0, partBItem.currentStock - partBGrams);
+      await StockMovement.create({
+        inventoryItem: partAItem._id,
+        itemName: partAItem.name,
+        category: partAItem.category,
+        movementType: 'Studio Production',
+        quantityChange: -partAGrams,
+        previousStock: prevA,
+        newStock: partAItem.currentStock,
+        unit: partAItem.unit,
+        referenceId: productName || 'Studio Batch Pour',
+        performedBy: performer,
+        notes: batchNotes || `Batch pour Part A (${ratioA}:${ratioB})`,
+        costImpact: Number((partAGrams * (partAItem.costPerUnit || 0)).toFixed(2)),
+      });
+
+      // Deduct Part B
+      const prevB = partBItem.currentStock;
+      partBItem.currentStock = Math.max(0, Number((prevB - partBGrams).toFixed(2)));
       await partBItem.save();
       deductedItems.push({ name: partBItem.name, deducted: partBGrams, unit: partBItem.unit, remaining: partBItem.currentStock });
       if (partBItem.currentStock <= partBItem.minStockAlert) lowStockAlerts.push(partBItem.name);
+
+      await StockMovement.create({
+        inventoryItem: partBItem._id,
+        itemName: partBItem.name,
+        category: partBItem.category,
+        movementType: 'Studio Production',
+        quantityChange: -partBGrams,
+        previousStock: prevB,
+        newStock: partBItem.currentStock,
+        unit: partBItem.unit,
+        referenceId: productName || 'Studio Batch Pour',
+        performedBy: performer,
+        notes: batchNotes || `Batch pour Part B (${ratioA}:${ratioB})`,
+        costImpact: Number((partBGrams * (partBItem.costPerUnit || 0)).toFixed(2)),
+      });
     } else if (allResinItems.length > 0) {
-      // Deduct total grams from the first available resin kit
       const primaryResin = allResinItems[0];
-      primaryResin.currentStock = Math.max(0, primaryResin.currentStock - grams);
+      const prev = primaryResin.currentStock;
+      primaryResin.currentStock = Math.max(0, Number((prev - grams).toFixed(2)));
       await primaryResin.save();
       deductedItems.push({ name: primaryResin.name, deducted: grams, unit: primaryResin.unit, remaining: primaryResin.currentStock });
       if (primaryResin.currentStock <= primaryResin.minStockAlert) lowStockAlerts.push(primaryResin.name);
+
+      await StockMovement.create({
+        inventoryItem: primaryResin._id,
+        itemName: primaryResin.name,
+        category: primaryResin.category,
+        movementType: 'Studio Production',
+        quantityChange: -grams,
+        previousStock: prev,
+        newStock: primaryResin.currentStock,
+        unit: primaryResin.unit,
+        referenceId: productName || 'Studio Batch Pour',
+        performedBy: performer,
+        notes: batchNotes || `Resin pour batch deduction`,
+        costImpact: Number((grams * (primaryResin.costPerUnit || 0)).toFixed(2)),
+      });
     } else {
       // Create a default inventory item if none existed
       const created = await Inventory.create({
@@ -340,4 +442,221 @@ export const consumeBatchStock = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ success: false, message: (error as Error).message });
   }
 };
+
+// @desc    Get stock movement audit history
+// @route   GET /api/inventory/movements
+// @access  Private/Admin
+export const getStockMovements = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { page = 1, limit = 25, movementType, search, inventoryItem } = req.query;
+    const pageNumber = Math.max(1, Number(page));
+    const pageSize = Math.max(1, Number(limit));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const query: any = {};
+    if (movementType && movementType !== 'All') {
+      query.movementType = movementType;
+    }
+    if (inventoryItem) {
+      query.inventoryItem = inventoryItem;
+    }
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const term = escapeRegex(search.trim());
+      query.$or = [
+        { itemName: { $regex: term, $options: 'i' } },
+        { referenceId: { $regex: term, $options: 'i' } },
+        { performedBy: { $regex: term, $options: 'i' } },
+        { notes: { $regex: term, $options: 'i' } },
+      ];
+    }
+
+    const total = await StockMovement.countDocuments(query);
+    const movements = await StockMovement.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize);
+
+    res.json({
+      success: true,
+      data: movements,
+      pagination: {
+        total,
+        page: pageNumber,
+        pages: Math.ceil(total / pageSize),
+        limit: pageSize,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+};
+
+// @desc    Record manual stock movement (spillage, correction, return, etc.)
+// @route   POST /api/inventory/movements
+// @access  Private/Admin
+export const recordManualMovement = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const validation = validatePayload(req.body, [
+      { field: 'inventoryItemId', label: 'Inventory Item', type: 'string', min: 5, customErrorMessage: 'Valid inventory item reference is required.' },
+      { field: 'movementType', label: 'Movement Type', type: 'string', min: 2, customErrorMessage: 'Movement type (Purchase, Spillage / Damage, Audit Correction, etc.) is required.' },
+      { field: 'quantityChange', label: 'Quantity Change', type: 'number', customErrorMessage: 'Quantity change is required.' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
+    const { inventoryItemId, movementType, quantityChange, notes, referenceId } = req.body;
+    const item = await Inventory.findById(inventoryItemId);
+    if (!item) {
+      sendNotFound(res, 'Inventory item', inventoryItemId);
+      return;
+    }
+
+    const prevStock = item.currentStock;
+    const qtyChange = Number(Number(quantityChange).toFixed(2));
+    const newStock = Math.max(0, Number((prevStock + qtyChange).toFixed(2)));
+
+    item.currentStock = newStock;
+    await item.save();
+
+    const movement = await StockMovement.create({
+      inventoryItem: item._id,
+      itemName: item.name,
+      category: item.category,
+      movementType,
+      quantityChange: qtyChange,
+      previousStock: prevStock,
+      newStock,
+      unit: item.unit,
+      referenceId: referenceId || '',
+      performedBy: req.user?.name || 'Admin',
+      notes: notes || '',
+      costImpact: Number((Math.abs(qtyChange) * (item.costPerUnit || 0)).toFixed(2)),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Recorded ${movementType} of ${qtyChange > 0 ? '+' : ''}${qtyChange} ${item.unit} for "${item.name}"`,
+      data: movement,
+      updatedStock: newStock,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+};
+
+// @desc    Get Inventory Capital Valuation & Dead-Stock Analytics
+// @route   GET /api/inventory/analytics/dead-stock
+// @access  Private/Admin
+export const getInventoryValuationAndDeadStock = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawMaterials = await Inventory.find();
+    const products = await Product.find();
+
+    let rawMaterialsCapital = 0;
+    const rawCategoryValuation: Record<string, number> = {};
+
+    rawMaterials.forEach((item) => {
+      const val = Number((item.currentStock * (item.costPerUnit || 0)).toFixed(2));
+      rawMaterialsCapital += val;
+      rawCategoryValuation[item.category] = Number(((rawCategoryValuation[item.category] || 0) + val).toFixed(2));
+    });
+
+    let finishedGoodsCapital = 0;
+    let finishedGoodsRetailValue = 0;
+
+    products.forEach((prod) => {
+      const estimatedCost = prod.costPrice || Number((prod.price * 0.45).toFixed(2));
+      const val = Number((prod.stock * estimatedCost).toFixed(2));
+      finishedGoodsCapital += val;
+      finishedGoodsRetailValue += Number((prod.stock * (prod.discountPrice || prod.price)).toFixed(2));
+    });
+
+    const now = new Date();
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+    // Dead-stock for finished products
+    const deadStockProducts = products
+      .filter((p) => p.stock > 0 && new Date(p.updatedAt) < sixtyDaysAgo)
+      .map((p) => {
+        const daysOld = Math.floor((now.getTime() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const isCritical = new Date(p.updatedAt) < ninetyDaysAgo;
+        const estCost = p.costPrice || Number((p.price * 0.45).toFixed(2));
+        return {
+          id: p._id,
+          title: p.title,
+          category: p.category,
+          thumbnail: p.thumbnail,
+          stock: p.stock,
+          unitCost: estCost,
+          lockedCapital: Number((p.stock * estCost).toFixed(2)),
+          sellingPrice: p.price,
+          daysInactive: daysOld,
+          status: isCritical ? 'Critical Dead Stock' : 'Slow Moving',
+          recommendation: isCritical
+            ? 'Action needed: Apply 25-35% clearance discount or bundle as bonus gift with top sellers.'
+            : 'Consider featuring in weekly promotional banner or social showcase.',
+        };
+      })
+      .sort((a, b) => b.lockedCapital - a.lockedCapital);
+
+    // Dead-stock for raw materials
+    const deadStockRawMaterials = rawMaterials
+      .filter((m) => m.currentStock > 0 && new Date(m.updatedAt) < sixtyDaysAgo)
+      .map((m) => {
+        const daysOld = Math.floor((now.getTime() - new Date(m.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const isCritical = new Date(m.updatedAt) < ninetyDaysAgo;
+        return {
+          id: m._id,
+          name: m.name,
+          category: m.category,
+          currentStock: m.currentStock,
+          unit: m.unit,
+          costPerUnit: m.costPerUnit,
+          lockedCapital: Number((m.currentStock * m.costPerUnit).toFixed(2)),
+          daysInactive: daysOld,
+          status: isCritical ? 'Critical Dormant' : 'Low Velocity',
+          recommendation: isCritical
+            ? 'Check chemical shelf-life / shelf crystallization; prioritize for upcoming custom workshop pours.'
+            : 'Evaluate current BOM recipes to increase utilization.',
+        };
+      })
+      .sort((a, b) => b.lockedCapital - a.lockedCapital);
+
+    const totalLockedDeadCapital =
+      deadStockProducts.reduce((sum, p) => sum + p.lockedCapital, 0) +
+      deadStockRawMaterials.reduce((sum, m) => sum + m.lockedCapital, 0);
+
+    res.json({
+      success: true,
+      data: {
+        valuation: {
+          rawMaterialsCapital: Math.round(rawMaterialsCapital * 100) / 100,
+          finishedGoodsCapital: Math.round(finishedGoodsCapital * 100) / 100,
+          finishedGoodsRetailValue: Math.round(finishedGoodsRetailValue * 100) / 100,
+          totalCombinedCapital: Math.round((rawMaterialsCapital + finishedGoodsCapital) * 100) / 100,
+          rawCategoryValuation,
+        },
+        deadStock: {
+          totalLockedDeadCapital: Math.round(totalLockedDeadCapital * 100) / 100,
+          totalDeadProductsCount: deadStockProducts.length,
+          totalDeadRawMaterialsCount: deadStockRawMaterials.length,
+          products: deadStockProducts,
+          rawMaterials: deadStockRawMaterials,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+};
+
 

@@ -4,10 +4,10 @@
   "description": "TypeScript Express MERN Backend for 3D E-Commerce",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "TMPDIR=$PWD ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "mkdir -p .ts_cache && TMPDIR=$PWD/.ts_cache ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "seed": "TMPDIR=$PWD ts-node-dev src/utils/seeder.ts"
+    "seed": "mkdir -p .ts_cache && TMPDIR=$PWD/.ts_cache ts-node-dev src/utils/seeder.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

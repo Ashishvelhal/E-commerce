@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShieldCheck, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
 import { User } from '../../../types';
 
 interface SecuritySettingsTabProps {
@@ -17,6 +17,8 @@ export const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
   setAdminPassword,
   user,
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className="p-4 sm:p-6 rounded-2xl bg-white border border-stone-200 space-y-4 shadow-xl">
       <h2 className="text-sm font-bold text-art-400 uppercase tracking-wider flex items-center gap-2">
@@ -57,12 +59,21 @@ export const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-art-600" />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               placeholder="Enter new 6+ character password"
-              className="w-full bg-white border border-art-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-art-300 focus:outline-none focus:border-brand-500"
+              className="w-full bg-white border border-art-700 rounded-xl pl-10 pr-10 py-2.5 text-xs text-art-300 focus:outline-none focus:border-brand-500"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-art-500 hover:text-art-700 transition-colors focus:outline-none p-1 rounded-lg"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       </div>

@@ -87,7 +87,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
             { Icon: Truck, color: 'text-brand-700', bg: 'bg-brand-500/10 border-brand-500/20', title: 'Free Delivery', sub: 'On all orders above ₹999' },
-            { Icon: RefreshCw, color: 'text-rose-700', bg: 'bg-rose-500/10 border-rose-500/20', title: '7-Day Easy Returns', sub: 'Hassle-free exchange policy' },
+            // { Icon: RefreshCw, color: 'text-rose-700', bg: 'bg-rose-500/10 border-rose-500/20', title: '7-Day Easy Returns', sub: 'Hassle-free exchange policy' },
             { Icon: Leaf, color: 'text-emerald-700', bg: 'bg-emerald-500/10 border-emerald-500/20', title: 'Eco-Friendly', sub: 'Non-toxic, food-safe resins' },
             { Icon: Headphones, color: 'text-plum-700', bg: 'bg-plum-500/10 border-plum-500/20', title: 'Artisan Support', sub: 'Talk to our craft specialists' },
           ].map(({ Icon, color, bg, title, sub }) => (

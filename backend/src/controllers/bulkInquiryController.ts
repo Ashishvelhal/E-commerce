@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { BulkInquiry } from '../models/BulkInquiry';
 import { AuthRequest } from '../types';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 /**
  * @desc    Submit a new bulk corporate / wedding inquiry (Public)
@@ -9,6 +10,24 @@ import { AuthRequest } from '../types';
  */
 export const createBulkInquiry = async (req: Request, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      { field: 'name', label: 'Contact Name', type: 'string', min: 2, customErrorMessage: 'Full contact name is required.' },
+      { field: 'email', label: 'Email Address', type: 'email', customErrorMessage: 'A valid email address is required (e.g. name@company.com).' },
+      { field: 'phone', label: 'Phone Number', type: 'string', min: 7, customErrorMessage: 'Valid contact phone number is required.' },
+      { field: 'companyOrEvent', label: 'Company / Event Name', type: 'string', min: 2, customErrorMessage: 'Company, organization, or wedding/event name is required.' },
+      { field: 'estimatedQuantity', label: 'Estimated Order Quantity', type: 'number', min: 1, customErrorMessage: 'Estimated bulk quantity must be at least 1 unit.' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const {
       name,
       email,
@@ -21,14 +40,6 @@ export const createBulkInquiry = async (req: Request, res: Response): Promise<vo
       budgetRange,
       customizationDetails,
     } = req.body;
-
-    if (!name || !email || !phone || !companyOrEvent || !estimatedQuantity) {
-      res.status(400).json({
-        success: false,
-        message: 'Please provide all required fields (Name, Email, Phone, Company/Event, and Quantity).',
-      });
-      return;
-    }
 
     const inquiry = await BulkInquiry.create({
       name,

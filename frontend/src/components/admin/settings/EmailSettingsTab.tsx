@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Eye,
+  EyeOff,
   Server,
   Palette,
 } from 'lucide-react';
@@ -69,6 +70,7 @@ export const EmailSettingsTab: React.FC<EmailSettingsTabProps> = ({
   onApplyUniversalEmail,
 }) => {
   const [activeTemplateTab, setActiveTemplateTab] = useState<'order' | 'custom' | 'bulk' | 'signature'>('order');
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [isAddingMailbox, setIsAddingMailbox] = useState(false);
   const [newMailboxEmail, setNewMailboxEmail] = useState('');
   const [newMailboxDept, setNewMailboxDept] = useState('General Inquiries');
@@ -869,15 +871,26 @@ export const EmailSettingsTab: React.FC<EmailSettingsTabProps> = ({
               <label className="block text-[11px] font-semibold text-stone-700 mb-1">
                 SMTP App Password
               </label>
-              <input
-                type="password"
-                value={smtpConfig.pass || ''}
-                onChange={(e) =>
-                  setSmtpConfig((prev) => ({ ...prev, pass: e.target.value }))
-                }
-                placeholder="••••••••••••••••"
-                className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-mono"
-              />
+              <div className="relative">
+                <input
+                  type={showSmtpPassword ? 'text' : 'password'}
+                  value={smtpConfig.pass || ''}
+                  onChange={(e) =>
+                    setSmtpConfig((prev) => ({ ...prev, pass: e.target.value }))
+                  }
+                  placeholder="••••••••••••••••"
+                  className="w-full bg-white border border-stone-300 rounded-xl pl-3 pr-9 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors focus:outline-none p-1 rounded-lg"
+                  aria-label={showSmtpPassword ? 'Hide password' : 'Show password'}
+                  title={showSmtpPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showSmtpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <div>

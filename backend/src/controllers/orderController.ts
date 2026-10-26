@@ -1,7 +1,70 @@
 import { Request, Response } from 'express';
 import { Order } from '../models/Order';
 import { Product } from '../models/Product';
+import { Recipe } from '../models/Recipe';
+import { Inventory } from '../models/Inventory';
+import { StockMovement } from '../models/StockMovement';
 import { AuthRequest } from '../types';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
+
+/**
+ * Deduct Raw Materials from Warehouse Inventory based on Product's linked BOM Recipe
+ */
+export const deductBOMForOrderItems = async (
+  items: Array<{ product: any; quantity: number }>,
+  referenceId: string,
+  performedBy: string
+): Promise<void> => {
+  for (const item of items) {
+    try {
+      const productId = item.product?._id || item.product;
+      const product = await Product.findById(productId);
+      if (!product || !product.recipeId) continue;
+
+      const recipe = await Recipe.findById(product.recipeId);
+      if (!recipe || !recipe.materials || recipe.materials.length === 0) continue;
+
+      const orderQty = Number(item.quantity) || 1;
+
+      for (const mat of recipe.materials) {
+        const requiredGramsOrUnits = Number((Number(mat.quantity) * orderQty).toFixed(2));
+        let inventoryItem = null;
+
+        if (mat.inventoryItem) {
+          inventoryItem = await Inventory.findById(mat.inventoryItem);
+        }
+        if (!inventoryItem && mat.name) {
+          inventoryItem = await Inventory.findOne({ name: { $regex: new RegExp(`^${mat.name}$`, 'i') } });
+        }
+
+        if (inventoryItem) {
+          const prevStock = inventoryItem.currentStock;
+          const newStock = Math.max(0, Number((prevStock - requiredGramsOrUnits).toFixed(2)));
+          inventoryItem.currentStock = newStock;
+          await inventoryItem.save();
+
+          await StockMovement.create({
+            inventoryItem: inventoryItem._id,
+            itemName: inventoryItem.name,
+            category: inventoryItem.category,
+            movementType: 'Customer Order',
+            quantityChange: -requiredGramsOrUnits,
+            previousStock: prevStock,
+            newStock: newStock,
+            unit: inventoryItem.unit,
+            referenceId,
+            performedBy,
+            notes: `Auto-deducted BOM for "${product.title}" (${orderQty} sold)`,
+            costImpact: Number((requiredGramsOrUnits * (inventoryItem.costPerUnit || mat.costPerUnit || 0)).toFixed(2)),
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to deduct BOM for order item:`, err);
+    }
+  }
+};
+
 
 // @desc    Create new order (Guest or Authenticated)
 // @route   POST /api/orders
@@ -18,13 +81,18 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       totalPrice,
     } = req.body;
 
-    if (!orderItems || orderItems.length === 0) {
-      res.status(400).json({ success: false, message: 'No order items specified' });
-      return;
-    }
+    const validation = validatePayload(req.body, [
+      { field: 'orderItems', label: 'Order Items', type: 'array', customErrorMessage: 'Order must include at least one product item.' },
+      { field: 'shippingAddress', label: 'Shipping Address', customValidator: (val) => val && typeof val === 'object' && Boolean(val.fullName && val.phone && val.street && val.city), customErrorMessage: 'Shipping address must include fullName, phone, street address, and city.' },
+    ]);
 
-    if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.street) {
-      res.status(400).json({ success: false, message: 'Please provide full name, contact phone number, and address' });
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
       return;
     }
 
@@ -33,9 +101,12 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       const product = await Product.findById(item.product);
       if (product) {
         if (product.stock < item.quantity) {
-          res.status(400).json({
-            success: false,
-            message: `Insufficient stock for ${product.title}. Only ${product.stock} units available.`,
+          sendValidationError(res, {
+            message: `Insufficient stock for "${product.title}". Requested: ${item.quantity}, Available: ${product.stock}.`,
+            fieldErrors: {
+              [item.product]: `Only ${product.stock} units available in studio inventory.`,
+            },
+            actionableSuggestion: `Please reduce the quantity of "${product.title}" to ${product.stock} or fewer.`,
           });
           return;
         }
@@ -61,6 +132,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       status: 'Processing',
     });
 
+    // Trigger automatic BOM deduction for raw materials
+    deductBOMForOrderItems(orderItems, `Order #${order._id.toString().slice(-6).toUpperCase()}`, 'Customer Checkout (BOM)').catch((err) => {
+      console.error('BOM auto-deduction error:', err);
+    });
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
@@ -80,7 +156,7 @@ export const getOrderById = async (req: Request, res: Response): Promise<void> =
       .populate('orderItems.product', 'title slug images thumbnail');
 
     if (!order) {
-      res.status(404).json({ success: false, message: 'Order not found' });
+      sendNotFound(res, 'Order', req.params.id);
       return;
     }
 
@@ -171,7 +247,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     const order = await Order.findById(req.params.id);
 
     if (!order) {
-      res.status(404).json({ success: false, message: 'Order not found' });
+      sendNotFound(res, 'Order', req.params.id);
       return;
     }
 
@@ -202,6 +278,23 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 // @access  Private/Admin
 export const createOrderByAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      { field: 'customerName', label: 'Customer Full Name', type: 'string', min: 2, customErrorMessage: 'Customer full name is required.' },
+      { field: 'customerPhone', label: 'Customer Phone', type: 'string', min: 7, customErrorMessage: 'Valid customer phone number is required.' },
+      { field: 'orderItems', label: 'Order Items', type: 'array', customErrorMessage: 'At least one order item is required.' },
+      { field: 'shippingAddress', label: 'Shipping Address', customValidator: (val) => val && typeof val === 'object' && Boolean(val.street && val.city), customErrorMessage: 'Shipping address (street and city) is required.' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const {
       customerName,
       customerPhone,
@@ -218,33 +311,57 @@ export const createOrderByAdmin = async (req: AuthRequest, res: Response): Promi
       notes,
     } = req.body;
 
-    if (!customerName || !customerPhone) {
-      res.status(400).json({ success: false, message: 'Customer name and phone are required' });
-      return;
-    }
+    // Process and enrich order items with cost price, profit, and bargain status
+    const enrichedItems = [];
+    let calculatedTotalCost = 0;
+    let calculatedTotalProfit = 0;
+    let orderHasBargain = false;
 
-    if (!orderItems || orderItems.length === 0) {
-      res.status(400).json({ success: false, message: 'At least one order item is required' });
-      return;
-    }
-
-    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city) {
-      res.status(400).json({ success: false, message: 'Shipping address (street + city) is required' });
-      return;
-    }
-
-    // Optionally decrement stock for each item if product exists
     for (const item of orderItems) {
+      let unitCost = Number(item.costPrice) || 0;
+      let originalCatalogPrice = Number(item.originalPrice) || Number(item.price);
+      let appliedSoldPrice = Number(item.soldPrice) !== undefined && item.soldPrice !== null && !isNaN(Number(item.soldPrice))
+        ? Number(item.soldPrice)
+        : Number(item.price);
+      const isItemBargained = Boolean(item.isBargained);
+
       if (item.product) {
         const product = await Product.findById(item.product);
-        if (product && product.stock >= item.quantity) {
-          product.stock = Math.max(0, product.stock - item.quantity);
-          await product.save();
+        if (product) {
+          if (!unitCost && product.costPrice) {
+            unitCost = product.costPrice;
+          }
+          if (!originalCatalogPrice) {
+            originalCatalogPrice = product.discountPrice || product.price;
+          }
+          if (product.stock >= item.quantity) {
+            product.stock = Math.max(0, product.stock - item.quantity);
+            await product.save();
+          }
         }
       }
+
+      if (isItemBargained) {
+        orderHasBargain = true;
+      }
+
+      const itemQty = Number(item.quantity) || 1;
+      const itemProfit = (appliedSoldPrice - unitCost) * itemQty;
+      calculatedTotalCost += unitCost * itemQty;
+      calculatedTotalProfit += itemProfit;
+
+      enrichedItems.push({
+        ...item,
+        price: appliedSoldPrice,
+        soldPrice: appliedSoldPrice,
+        originalPrice: originalCatalogPrice,
+        costPrice: unitCost,
+        profit: itemProfit,
+        isBargained: isItemBargained,
+      });
     }
 
-    const computed = Number(itemsPrice) || 0;
+    const computed = Number(itemsPrice) || enrichedItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     const tax     = Number(taxPrice)     || 0;
     const ship    = Number(shippingPrice) || 0;
     const total   = Number(totalPrice)   || computed + tax + ship;
@@ -254,7 +371,7 @@ export const createOrderByAdmin = async (req: AuthRequest, res: Response): Promi
       customerName,
       customerPhone,
       customerEmail: customerEmail || '',
-      orderItems,
+      orderItems: enrichedItems,
       shippingAddress: {
         fullName:   customerName,
         street:     shippingAddress.street,
@@ -270,11 +387,20 @@ export const createOrderByAdmin = async (req: AuthRequest, res: Response): Promi
       taxPrice:   tax,
       shippingPrice: ship,
       totalPrice: total,
+      hasBargain: orderHasBargain,
+      totalCost: calculatedTotalCost,
+      totalProfit: calculatedTotalProfit,
       isPaid: paymentMethod !== 'CashOnDelivery',
       paidAt: paymentMethod !== 'CashOnDelivery' ? new Date() : undefined,
       status: status || 'Processing',
       trackingNumber: trackingNumber || '',
       notes,
+    });
+
+    // Trigger automatic BOM deduction for raw materials
+    const adminLabel = req.user?.name ? `Admin (${req.user.name})` : 'Admin Walk-in/Phone';
+    deductBOMForOrderItems(enrichedItems, `Admin #${order._id.toString().slice(-6).toUpperCase()}`, adminLabel).catch((err) => {
+      console.error('Admin BOM auto-deduction error:', err);
     });
 
     res.status(201).json({

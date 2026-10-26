@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Recipe } from '../models/Recipe';
 import { Inventory } from '../models/Inventory';
 import { StudioNote } from '../models/StudioNote';
+import { validatePayload, sendValidationError, sendNotFound } from '../utils/responseHelper';
 
 // Helper to calculate live recipe material cost
 const calculateLiveCost = async (recipe: any) => {
@@ -98,6 +99,22 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
 // @access  Private/Admin
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
   try {
+    const validation = validatePayload(req.body, [
+      { field: 'name', label: 'Recipe Name', type: 'string', min: 2, customErrorMessage: 'Recipe name is required.' },
+      { field: 'productType', label: 'Product Type', type: 'string', min: 2, customErrorMessage: 'Product type is required (e.g. Coaster, Clock, Keychain).' },
+      { field: 'materials', label: 'Materials List', type: 'array', customErrorMessage: 'At least one material component is required in the recipe.' },
+    ]);
+
+    if (!validation.isValid) {
+      sendValidationError(res, {
+        message: validation.summaryMessage,
+        missingFields: validation.missingFields,
+        fieldErrors: validation.fieldErrors,
+        actionableSuggestion: validation.actionableSuggestion,
+      });
+      return;
+    }
+
     const {
       name,
       productType,
@@ -111,11 +128,6 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
       suggestedRetailPrice,
       tags,
     } = req.body;
-
-    if (!name || !productType || !materials || !Array.isArray(materials) || materials.length === 0) {
-      res.status(400).json({ success: false, message: 'Please provide recipe name, product type, and materials list' });
-      return;
-    }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
@@ -155,7 +167,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
     const recipe = await Recipe.findById(id);
 
     if (!recipe) {
-      res.status(404).json({ success: false, message: 'Recipe not found' });
+      sendNotFound(res, 'Recipe', id);
       return;
     }
 
@@ -205,7 +217,7 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
     const recipe = await Recipe.findByIdAndDelete(id);
 
     if (!recipe) {
-      res.status(404).json({ success: false, message: 'Recipe not found' });
+      sendNotFound(res, 'Recipe', id);
       return;
     }
 
