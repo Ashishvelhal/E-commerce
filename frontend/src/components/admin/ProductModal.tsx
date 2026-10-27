@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Plus, Trash2, Box, CheckCircle2, Image as ImageIcon, TrendingUp, AlertCircle, ShieldCheck, Tag, Handshake, DollarSign, BookOpen } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Box, CheckCircle2, Image as ImageIcon, TrendingUp, AlertCircle, ShieldCheck, Tag, Handshake, DollarSign, BookOpen, Sparkles } from 'lucide-react';
 import { Product, Specification, ModelColorVariant } from '../../types';
 import { useToastStore } from '../../store/useToastStore';
 import api from '../../services/api';
@@ -153,6 +153,74 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   }, [product, isOpen]);
 
+  const handleAutoFillProduct = (templateKey: 'clock' | 'thali' | 'coasters') => {
+    if (templateKey === 'clock') {
+      setTitle('Ocean Wave Geode Resin Wall Clock (14")');
+      setDescription('Handcrafted 14-inch luxury ocean resin geode clock with genuine quartz crystals, real sand, gold leaf accents, and a silent sweeping quartz movement.');
+      setRichDetails('Crafted with 3 layers of high-grade art epoxy. Includes quartz points, crushed fire glass, and metallic pigments.');
+      setCategory('Resin Wall Clocks');
+      setPrice('2899.00');
+      setDiscountPrice('2499.00');
+      setCostPrice('950.00');
+      setMinBargainPrice('2100.00');
+      setStock('12');
+      setThumbnail('https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop&q=80');
+      setImagesText('https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop&q=80');
+      setSpecs([
+        { key: 'Dimensions', value: '14-inch diameter, 18mm thickness' },
+        { key: 'Materials', value: 'UV-resistant epoxy resin, raw crystal geodes, gold leaf' },
+        { key: 'Mechanism', value: 'Silent sweep continuous quartz movement' },
+      ]);
+      setColors([
+        { name: 'Deep Ocean Blue', hex: '#0369a1' },
+        { name: 'Turquoise Lagoon', hex: '#06b6d4' },
+      ]);
+    } else if (templateKey === 'thali') {
+      setTitle('Royal Gold & Pearl Resin Pooja Thali (11")');
+      setDescription('Festive handcrafted resin pooja aarti thali with encrusted pearls, 24K gold foil, and matching attached diya holders.');
+      setRichDetails('Heat-resistant up to 95°C for standard brass and clay diyas. Washable with mild soapy water.');
+      setCategory('Pooja Thalis & Platters');
+      setPrice('1599.00');
+      setDiscountPrice('1299.00');
+      setCostPrice('480.00');
+      setMinBargainPrice('1100.00');
+      setStock('25');
+      setThumbnail('https://images.unsplash.com/photo-1606293926075-69a00dbfde81?w=800&auto=format&fit=crop&q=80');
+      setImagesText('https://images.unsplash.com/photo-1606293926075-69a00dbfde81?w=800&auto=format&fit=crop&q=80');
+      setSpecs([
+        { key: 'Diameter', value: '11-inch round platter' },
+        { key: 'Heat Resistance', value: 'Up to 95°C for aarti diya placement' },
+        { key: 'Finish', value: 'Scratch-proof diamond high gloss coat' },
+      ]);
+      setColors([
+        { name: 'Imperial Red & Gold', hex: '#b91c1c' },
+        { name: 'Royal Emerald Gold', hex: '#047857' },
+      ]);
+    } else {
+      setTitle('Emerald Agate Resin Coaster Set (4 Pcs)');
+      setDescription('Handmade emerald green and gold leaf agate slice coasters with gold gilded edges and non-slip silicone feet.');
+      setRichDetails('Set of 4 matching resin slices. Each piece has unique organic marbling and hand-painted metallic edges.');
+      setCategory('Coasters & Trays');
+      setPrice('799.00');
+      setDiscountPrice('649.00');
+      setCostPrice('240.00');
+      setMinBargainPrice('550.00');
+      setStock('30');
+      setThumbnail('https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80');
+      setImagesText('https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80');
+      setSpecs([
+        { key: 'Quantity', value: '4 matching handmade coasters' },
+        { key: 'Size', value: '4-inch diameter each' },
+        { key: 'Features', value: 'Heat resistant up to 90°C with gold gilded rims' },
+      ]);
+      setColors([
+        { name: 'Emerald & Gold', hex: '#059669' },
+        { name: 'Sapphire & Gold', hex: '#2563eb' },
+      ]);
+    }
+    addToast('Auto-filled resin product template!', 'success');
+  };
+
   if (!isOpen) return null;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, is3DFile = false) => {
@@ -281,24 +349,56 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative w-full max-w-4xl bg-white border border-art-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 my-4 sm:my-8 flex flex-col max-h-[92vh]"
         >
-          <div className="p-4 sm:p-6 border-b border-art-800 flex items-center justify-between sticky top-0 bg-white z-10">
+          <div className="p-4 sm:p-6 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-0 bg-white z-10">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-2.5 rounded-xl bg-brand-50 text-brand-700 shrink-0">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                 <Box className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-art-300 truncate">
+                <h2 className="text-base sm:text-lg font-black text-stone-900 truncate">
                   {product ? 'Edit Product' : 'Create New Product'}
                 </h2>
-                <p className="text-[11px] sm:text-xs text-art-500 truncate">Configure catalog specs, 3D WebGL assets & pricing</p>
+                <p className="text-[11px] sm:text-xs text-stone-500 truncate">Configure catalog specs, 3D WebGL assets & pricing</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-art-500 hover:text-art-300 hover:bg-art-900 transition-colors shrink-0"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {!product && (
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-amber-50 border border-amber-200">
+                  <span className="text-[10px] font-black uppercase text-amber-900 px-1.5 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                    Auto-Fill:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoFillProduct('clock')}
+                    className="px-2 py-1 rounded-lg bg-white border border-amber-200 hover:border-brand-500 text-[10px] font-bold text-stone-800 transition-all shadow-2xs"
+                  >
+                    Geode Clock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoFillProduct('thali')}
+                    className="px-2 py-1 rounded-lg bg-white border border-amber-200 hover:border-brand-500 text-[10px] font-bold text-stone-800 transition-all shadow-2xs"
+                  >
+                    Pooja Thali
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoFillProduct('coasters')}
+                    className="px-2 py-1 rounded-lg bg-white border border-amber-200 hover:border-brand-500 text-[10px] font-bold text-stone-800 transition-all shadow-2xs"
+                  >
+                    Coaster Set
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 border border-stone-200 transition-colors shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
           <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">

@@ -5,7 +5,8 @@ import {
   Store, Zap, Search, Plus, Minus, Trash2, QrCode, DollarSign,
   Smartphone, CreditCard, CheckCircle2, User, Phone, ArrowRight,
   TrendingUp, RefreshCw, X, ShieldCheck, Tag, Sparkles, Building2,
-  Calendar, FileText, Send, Download, Award, PieChart, ShoppingBag
+  Calendar, FileText, Send, Download, Award, PieChart, ShoppingBag,
+  Upload, Image as ImageIcon
 } from 'lucide-react';
 import { Product, StallSession, StallSessionSummaryResponse } from '../../types';
 import { AdminNavbar } from '../../components/admin/AdminNavbar';
@@ -60,6 +61,53 @@ export const AdminStallPOSPage: React.FC = () => {
   const [isStartSessionModalOpen, setIsStartSessionModalOpen] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [newSessionLocation, setNewSessionLocation] = useState('');
+
+  // UPI Payment QR Configuration State (persisted in localStorage)
+  const [upiId, setUpiId] = useState<string>(() => localStorage.getItem('rasin_stall_upi_id') || 'rasinarts@okhdfcbank');
+  const [payeeName, setPayeeName] = useState<string>(() => localStorage.getItem('rasin_stall_payee_name') || 'Rasin Arts Studio');
+  const [customQrImage, setCustomQrImage] = useState<string>(() => localStorage.getItem('rasin_stall_custom_qr') || '');
+  const [isQrSettingsModalOpen, setIsQrSettingsModalOpen] = useState(false);
+  const [showQrOnPad, setShowQrOnPad] = useState(true);
+
+  // Temporary edit state in QR settings modal
+  const [tempUpiId, setTempUpiId] = useState(upiId);
+  const [tempPayeeName, setTempPayeeName] = useState(payeeName);
+  const [tempCustomQrImage, setTempCustomQrImage] = useState(customQrImage);
+
+  const handleSaveQrSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUpi = tempUpiId.trim();
+    const cleanPayee = tempPayeeName.trim();
+    if (!cleanUpi) {
+      addToast('Please enter a valid UPI ID (e.g. yourname@okhdfcbank)', 'warning');
+      return;
+    }
+    setUpiId(cleanUpi);
+    setPayeeName(cleanPayee || 'Rasin Arts Studio');
+    setCustomQrImage(tempCustomQrImage.trim());
+    localStorage.setItem('rasin_stall_upi_id', cleanUpi);
+    localStorage.setItem('rasin_stall_payee_name', cleanPayee || 'Rasin Arts Studio');
+    localStorage.setItem('rasin_stall_custom_qr', tempCustomQrImage.trim());
+    setIsQrSettingsModalOpen(false);
+    addToast('Payment QR & UPI settings saved!', 'success');
+  };
+
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      addToast('QR image must be under 2MB', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setTempCustomQrImage(reader.result);
+        addToast('Custom QR standee image loaded!', 'info');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // 1. Fetch Products & Active Session
   const fetchActiveSession = async () => {
@@ -486,29 +534,30 @@ export const AdminStallPOSPage: React.FC = () => {
 
       <div className="p-3 xs:p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
         {/* Top Active Session Header & Live Ticker */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-brand-900 via-slate-900 to-purple-900 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-brand-500/30">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/30">
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-stone-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/20 shrink-0">
               <Store className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-black tracking-tight">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-base sm:text-lg font-black tracking-tight text-stone-900">
                   {activeSession ? activeSession.name : 'No Active Stall Session'}
                 </span>
                 {activeSession ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     LIVE STALL ACTIVE
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700 text-slate-300">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-600 border border-stone-200">
                     Offline
                   </span>
                 )}
               </div>
-              <p className="text-xs text-brand-200">
-                Location: {activeSession?.location || 'Flea Market Ground'} • Started:{' '}
+              <p className="text-xs text-stone-500 mt-0.5">
+                <span className="font-semibold text-stone-700">Location:</span> {activeSession?.location || 'Flea Market Ground'} •{' '}
+                <span className="font-semibold text-stone-700">Started:</span>{' '}
                 {activeSession
                   ? new Date(activeSession.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
                   : '—'}
@@ -517,17 +566,17 @@ export const AdminStallPOSPage: React.FC = () => {
           </div>
 
           {/* Live Sales Ticker Cards */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center min-w-[100px]">
-              <span className="text-[10px] font-bold uppercase text-brand-200 block">Stall Sales</span>
-              <span className="text-lg font-black font-mono text-emerald-400">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="px-4 py-2 rounded-2xl bg-stone-50 border border-stone-200 text-center min-w-[110px] shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">Stall Sales</span>
+              <span className="text-lg font-black font-mono text-emerald-700">
                 ₹{activeSession ? activeSession.totalRevenue.toLocaleString('en-IN') : '0'}
               </span>
             </div>
 
-            <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center min-w-[70px]">
-              <span className="text-[10px] font-bold uppercase text-brand-200 block">Orders</span>
-              <span className="text-lg font-black font-mono text-white">
+            <div className="px-4 py-2 rounded-2xl bg-stone-50 border border-stone-200 text-center min-w-[80px] shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">Orders</span>
+              <span className="text-lg font-black font-mono text-stone-900">
                 {activeSession?.ordersCount || 0}
               </span>
             </div>
@@ -536,14 +585,15 @@ export const AdminStallPOSPage: React.FC = () => {
               {!activeSession ? (
                 <button
                   onClick={() => setIsStartSessionModalOpen(true)}
-                  className="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-all active:scale-95"
+                  className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-95 flex items-center gap-1.5"
                 >
-                  + Start Stall Day
+                  <Plus className="w-4 h-4" />
+                  <span>Start Stall Day</span>
                 </button>
               ) : (
                 <button
                   onClick={handleCloseSession}
-                  className="px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-500/20 text-rose-300 border border-rose-400/30 text-xs font-bold transition-all"
+                  className="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 text-xs font-bold transition-all shadow-2xs"
                   title="Close and reconcile session"
                 >
                   Close Stall Day
@@ -554,12 +604,14 @@ export const AdminStallPOSPage: React.FC = () => {
         </div>
 
         {/* View Mode Navigation Switcher */}
-        <div className="flex items-center justify-between border-b border-art-800 pb-3">
-          <div className="flex rounded-2xl bg-art-900 p-1 border border-art-800 text-xs font-bold">
+        <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+          <div className="flex rounded-2xl bg-white p-1 border border-stone-200 shadow-sm text-xs font-bold">
             <button
               onClick={() => setActiveTab('kiosk')}
               className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
-                activeTab === 'kiosk' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400 hover:text-art-200'
+                activeTab === 'kiosk'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
               }`}
             >
               <Zap className="w-4 h-4" />
@@ -568,7 +620,9 @@ export const AdminStallPOSPage: React.FC = () => {
             <button
               onClick={() => setActiveTab('summary')}
               className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
-                activeTab === 'summary' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400 hover:text-art-200'
+                activeTab === 'summary'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
               }`}
             >
               <PieChart className="w-4 h-4" />
@@ -577,7 +631,9 @@ export const AdminStallPOSPage: React.FC = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
-                activeTab === 'history' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400 hover:text-art-200'
+                activeTab === 'history'
+                  ? 'bg-brand-500 text-white shadow-md'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
               }`}
             >
               <Calendar className="w-4 h-4" />
@@ -586,8 +642,8 @@ export const AdminStallPOSPage: React.FC = () => {
           </div>
 
           {activeTab === 'kiosk' && (
-            <div className="text-xs text-art-400 font-mono hidden md:block">
-              Cart Items: <strong className="text-brand-400">{cart.reduce((a, b) => a + b.quantity, 0)}</strong>
+            <div className="text-xs text-stone-600 font-mono hidden md:block">
+              Cart Items: <strong className="text-brand-600 text-sm font-bold">{cart.reduce((a, b) => a + b.quantity, 0)}</strong>
             </div>
           )}
         </div>
@@ -600,66 +656,66 @@ export const AdminStallPOSPage: React.FC = () => {
             {/* Left Column: Product Tiles & Bundles (7 cols) */}
             <div className="lg:col-span-7 xl:col-span-8 space-y-4">
               {/* Exhibition Bundle Deals Shortcuts Banner */}
-              <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-rose-500/10 border border-brand-500/30 space-y-2.5">
+              <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border border-amber-200 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    Exhibition Bundle & Impulse Promos (1-Tap Apply)
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    Exhibition Bundle &amp; Impulse Promos (1-Tap Apply)
                   </span>
                   {appliedBundle && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-500 text-white">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-brand-500 text-white shadow-sm flex items-center gap-1">
                       Active: {appliedBundle}
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <button
                     type="button"
                     onClick={() => handleApplyBundle('Pick Any 3 for ₹599', 'pick3')}
-                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all active:scale-95 group"
+                    className="p-3 rounded-2xl bg-white hover:bg-amber-100/50 border border-amber-200 text-left transition-all active:scale-95 group shadow-xs hover:border-amber-400"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">Combo #1</span>
-                    <strong className="text-xs font-black text-white block group-hover:text-brand-300 truncate">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block">Combo #1</span>
+                    <strong className="text-xs font-black text-stone-900 block group-hover:text-brand-600 truncate mt-0.5">
                       3 Small for ₹599
                     </strong>
-                    <span className="text-[10px] text-art-400">Keychains, bookmarks</span>
+                    <span className="text-[10px] text-stone-500 font-medium">Keychains, bookmarks</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleApplyBundle('Clock + 50% Coasters', 'clockCombo')}
-                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all active:scale-95 group"
+                    className="p-3 rounded-2xl bg-white hover:bg-purple-50 border border-purple-200 text-left transition-all active:scale-95 group shadow-xs hover:border-purple-400"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 block">Combo #2</span>
-                    <strong className="text-xs font-black text-white block group-hover:text-brand-300 truncate">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 block">Combo #2</span>
+                    <strong className="text-xs font-black text-stone-900 block group-hover:text-purple-700 truncate mt-0.5">
                       Clock + 50% Coasters
                     </strong>
-                    <span className="text-[10px] text-art-400">Matching set deal</span>
+                    <span className="text-[10px] text-stone-500 font-medium">Matching set deal</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleApplyBundle('Diwali Festive Hamper', 'festiveHamper')}
-                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all active:scale-95 group"
+                    className="p-3 rounded-2xl bg-white hover:bg-emerald-50 border border-emerald-200 text-left transition-all active:scale-95 group shadow-xs hover:border-emerald-400"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Festive Hamper</span>
-                    <strong className="text-xs font-black text-white block group-hover:text-brand-300 truncate">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">Festive Hamper</span>
+                    <strong className="text-xs font-black text-stone-900 block group-hover:text-emerald-700 truncate mt-0.5">
                       Thali + Diya ₹1,200
                     </strong>
-                    <span className="text-[10px] text-art-400">Gift box included</span>
+                    <span className="text-[10px] text-stone-500 font-medium">Gift box included</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleApplyBundle('10% Flash Discount', 'flash10')}
-                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all active:scale-95 group"
+                    className="p-3 rounded-2xl bg-white hover:bg-rose-50 border border-rose-200 text-left transition-all active:scale-95 group shadow-xs hover:border-rose-400"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">Flash Deal</span>
-                    <strong className="text-xs font-black text-white block group-hover:text-brand-300 truncate">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 block">Flash Deal</span>
+                    <strong className="text-xs font-black text-stone-900 block group-hover:text-rose-700 truncate mt-0.5">
                       10% Off Stall Bill
                     </strong>
-                    <span className="text-[10px] text-art-400">Negotiated closing</span>
+                    <span className="text-[10px] text-stone-500 font-medium">Negotiated closing</span>
                   </button>
                 </div>
               </div>
@@ -667,17 +723,17 @@ export const AdminStallPOSPage: React.FC = () => {
               {/* Filter & Search Bar */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-art-500 absolute left-3.5 top-3" />
+                  <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search stall product by name or SKU..."
-                    className="w-full bg-art-900 border border-art-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-art-300 placeholder-art-600 focus:outline-none focus:border-brand-500"
+                    className="w-full bg-white border border-stone-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-brand-500 shadow-xs"
                   />
                 </div>
 
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
                   {categories.map((cat) => (
                     <button
                       key={cat}
@@ -685,7 +741,7 @@ export const AdminStallPOSPage: React.FC = () => {
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                         selectedCategory === cat
                           ? 'bg-brand-500 text-white shadow-md'
-                          : 'bg-art-900 border border-art-800 text-art-400 hover:text-art-200'
+                          : 'bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 shadow-xs'
                       }`}
                     >
                       {cat}
@@ -697,13 +753,13 @@ export const AdminStallPOSPage: React.FC = () => {
               {/* Giant Touch Tiles Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[580px] overflow-y-auto pr-1">
                 {loadingProducts ? (
-                  <div className="col-span-full py-20 text-center text-art-500">
+                  <div className="col-span-full py-20 text-center text-stone-500">
                     <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2 text-brand-500" />
                     <span>Loading stall products...</span>
                   </div>
                 ) : filteredProducts.length === 0 ? (
-                  <div className="col-span-full py-20 text-center text-art-500">
-                    <ShoppingBag className="w-8 h-8 mx-auto mb-2 text-art-600" />
+                  <div className="col-span-full py-20 text-center text-stone-500">
+                    <ShoppingBag className="w-8 h-8 mx-auto mb-2 text-stone-400" />
                     <p>No products match your search.</p>
                   </div>
                 ) : (
@@ -715,40 +771,41 @@ export const AdminStallPOSPage: React.FC = () => {
                         key={p._id}
                         whileTap={{ scale: isOutOfStock ? 1 : 0.96 }}
                         onClick={() => handleAddToCart(p)}
-                        className={`p-3 rounded-3xl bg-art-900 border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden select-none ${
+                        className={`p-3 rounded-3xl bg-white border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden select-none ${
                           isOutOfStock
-                            ? 'opacity-40 border-art-800 cursor-not-allowed'
-                            : 'border-art-800 hover:border-brand-400 hover:shadow-lg shadow-sm'
+                            ? 'opacity-40 border-stone-200 cursor-not-allowed'
+                            : 'border-stone-200 hover:border-brand-500 hover:shadow-lg shadow-xs'
                         }`}
                       >
                         <div className="space-y-2">
-                          <div className="relative aspect-square rounded-2xl overflow-hidden bg-art-950">
+                          <div className="relative aspect-square rounded-2xl overflow-hidden bg-stone-100">
                             <img
                               src={p.thumbnail}
                               alt={p.title}
                               className="w-full h-full object-cover"
                               loading="lazy"
                             />
-                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[10px] font-mono font-bold text-white">
+                            <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-lg bg-white/95 backdrop-blur-xs text-[10px] font-mono font-bold text-stone-800 border border-stone-200 shadow-2xs flex items-center gap-1">
+                              <span className={`w-1.5 h-1.5 rounded-full ${p.stock > 5 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                               {p.stock} in stock
                             </div>
                           </div>
 
                           <div>
-                            <span className="text-[10px] font-bold text-brand-400 block truncate">
+                            <span className="text-[10px] font-bold text-brand-700 block truncate uppercase tracking-wider">
                               {p.category}
                             </span>
-                            <h4 className="font-bold text-art-200 text-xs truncate leading-snug">
+                            <h4 className="font-bold text-stone-900 text-xs truncate leading-snug">
                               {p.title}
                             </h4>
                           </div>
                         </div>
 
-                        <div className="pt-2 flex items-center justify-between border-t border-art-800/80 mt-2">
-                          <span className="text-sm font-black font-mono text-emerald-400">
+                        <div className="pt-2 flex items-center justify-between border-t border-stone-100 mt-2">
+                          <span className="text-sm font-black font-mono text-emerald-700">
                             ₹{price}
                           </span>
-                          <span className="text-[10px] font-mono text-art-500">
+                          <span className="text-[10px] font-mono font-semibold text-stone-600">
                             Cost: ₹{p.costPrice || Math.round(price * 0.45)}
                           </span>
                         </div>
@@ -760,70 +817,119 @@ export const AdminStallPOSPage: React.FC = () => {
             </div>
 
             {/* Right Column: Order Pad & Fast Checkout (5 cols) */}
-            <div className="lg:col-span-5 xl:col-span-4 p-5 rounded-3xl bg-art-900 border border-art-800 shadow-xl space-y-4 sticky top-24">
-              <div className="flex items-center justify-between border-b border-art-800 pb-3">
+            <div className="lg:col-span-5 xl:col-span-4 p-5 rounded-3xl bg-white border border-stone-200 shadow-xl space-y-4 sticky top-24">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-brand-500" />
-                  <h3 className="font-black text-sm text-art-200">Current Stall Order Pad</h3>
+                  <ShoppingBag className="w-5 h-5 text-brand-500" />
+                  <h3 className="font-black text-sm text-stone-900">Current Stall Order Pad</h3>
                 </div>
-                {cart.length > 0 && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={handleClearCart}
-                    className="text-[11px] font-bold text-rose-400 hover:text-rose-300"
+                    type="button"
+                    onClick={() => {
+                      setTempUpiId(upiId);
+                      setTempPayeeName(payeeName);
+                      setTempCustomQrImage(customQrImage);
+                      setIsQrSettingsModalOpen(true);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                    title="Configure Stall Payment QR & UPI ID"
                   >
-                    Clear All
+                    <QrCode className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Setup QR</span>
                   </button>
-                )}
+                  {cart.length > 0 && (
+                    <button
+                      onClick={handleClearCart}
+                      className="text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Customer Contact (For WhatsApp Receipt) */}
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-art-950 border border-art-800 text-xs">
-                <div>
-                  <label className="text-[10px] font-bold text-art-500 uppercase block mb-1">Customer Name</label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Guest Name"
-                    className="w-full bg-art-900 border border-art-800 rounded-xl px-2.5 py-1.5 text-xs text-art-200 focus:outline-none focus:border-brand-500"
-                  />
+              {/* Customer Contact (For WhatsApp Receipt) with Auto-Fill */}
+              <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider block">Customer Details</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerName('Walk-in Guest');
+                        setCustomerPhone('9876543210');
+                        addToast('Auto-filled walk-in customer details', 'info');
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold border border-amber-300 transition-colors flex items-center gap-1 shadow-2xs"
+                      title="Auto-fill walk-in customer details"
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-amber-700" />
+                      <span>Auto-Fill Guest</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerName('VIP Collector');
+                        setCustomerPhone('9820011223');
+                        addToast('Auto-filled VIP customer details', 'info');
+                      }}
+                      className="px-1.5 py-0.5 rounded-md bg-stone-200 hover:bg-stone-300 text-stone-800 text-[10px] font-bold transition-colors"
+                      title="Auto-fill VIP customer details"
+                    >
+                      VIP
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-art-500 uppercase block mb-1">WhatsApp Phone *</label>
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="10-digit mobile"
-                    className="w-full bg-art-900 border border-art-800 rounded-xl px-2.5 py-1.5 text-xs font-mono text-art-200 focus:outline-none focus:border-brand-500"
-                  />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase block mb-1">Customer Name</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Guest Name"
+                      className="w-full bg-white border border-stone-300 rounded-xl px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase block mb-1">WhatsApp Phone *</label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="10-digit mobile"
+                      className="w-full bg-white border border-stone-300 rounded-xl px-2.5 py-1.5 text-xs font-mono text-stone-900 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Cart Items List */}
               <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                 {cart.length === 0 ? (
-                  <div className="py-8 text-center text-art-500 space-y-1">
-                    <p className="text-xs font-semibold">Cart is currently empty.</p>
+                  <div className="py-8 text-center text-stone-400 space-y-1">
+                    <p className="text-xs font-semibold text-stone-600">Cart is currently empty.</p>
                     <p className="text-[11px]">Tap products on the left to add items.</p>
                   </div>
                 ) : (
                   cart.map((item) => (
                     <div
                       key={item.product._id}
-                      className="p-2.5 rounded-2xl bg-art-950 border border-art-800 flex items-center justify-between gap-2 text-xs"
+                      className="p-2.5 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-2 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <img
                           src={item.product.thumbnail}
                           alt=""
-                          className="w-9 h-9 rounded-xl object-cover shrink-0"
+                          className="w-9 h-9 rounded-xl object-cover shrink-0 border border-stone-200"
                         />
                         <div className="truncate">
-                          <strong className="text-art-200 block truncate leading-tight font-bold">
+                          <strong className="text-stone-900 block truncate leading-tight font-bold">
                             {item.product.title}
                           </strong>
-                          <span className="font-mono text-art-400 text-[11px]">
+                          <span className="font-mono text-stone-500 text-[11px]">
                             ₹{item.soldPrice} each
                           </span>
                         </div>
@@ -832,22 +938,22 @@ export const AdminStallPOSPage: React.FC = () => {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => handleUpdateQuantity(item.product._id, -1)}
-                          className="w-6 h-6 rounded-lg bg-art-900 border border-art-800 flex items-center justify-center text-art-300 hover:text-white"
+                          className="w-6 h-6 rounded-lg bg-white border border-stone-300 flex items-center justify-center text-stone-700 hover:bg-stone-100"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-5 text-center font-mono font-black text-xs text-white">
+                        <span className="w-5 text-center font-mono font-black text-xs text-stone-900">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => handleUpdateQuantity(item.product._id, 1)}
-                          className="w-6 h-6 rounded-lg bg-art-900 border border-art-800 flex items-center justify-center text-art-300 hover:text-white"
+                          className="w-6 h-6 rounded-lg bg-white border border-stone-300 flex items-center justify-center text-stone-700 hover:bg-stone-100"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handleRemoveFromCart(item.product._id)}
-                          className="p-1 text-rose-500 hover:text-rose-400 ml-1"
+                          className="p-1 text-rose-500 hover:text-rose-700 ml-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -858,31 +964,94 @@ export const AdminStallPOSPage: React.FC = () => {
               </div>
 
               {/* Totals & Discount Controls */}
-              <div className="pt-3 border-t border-art-800 space-y-2 text-xs font-medium">
-                <div className="flex justify-between text-art-400">
+              <div className="pt-3 border-t border-stone-200 space-y-2 text-xs font-medium">
+                <div className="flex justify-between text-stone-600">
                   <span>Gross Subtotal:</span>
-                  <span className="font-mono font-bold text-art-200">₹{rawSubtotal.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-stone-900">₹{rawSubtotal.toFixed(2)}</span>
                 </div>
 
                 {calculatedDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-400 font-bold">
+                  <div className="flex justify-between text-emerald-700 font-bold">
                     <span>Discount / Bundle Savings:</span>
                     <span className="font-mono">-₹{calculatedDiscount.toFixed(2)}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between text-lg font-black text-white pt-2 border-t border-art-800/80">
+                <div className="flex justify-between text-lg font-black text-stone-900 pt-2 border-t border-stone-200">
                   <span>Total Payable:</span>
-                  <span className="font-mono text-emerald-400 text-xl">₹{finalPayable.toFixed(2)}</span>
+                  <span className="font-mono text-emerald-700 text-xl font-black">₹{finalPayable.toFixed(2)}</span>
                 </div>
               </div>
+
+              {/* Live Counter Payment QR Box (Instant Customer Walk-in Scan) */}
+              {cart.length > 0 && showQrOnPad && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-b from-stone-50 to-white border border-stone-200 text-center space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                      Live Customer Pay QR
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempUpiId(upiId);
+                        setTempPayeeName(payeeName);
+                        setTempCustomQrImage(customQrImage);
+                        setIsQrSettingsModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer"
+                    >
+                      Configure QR
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-center py-1">
+                    {customQrImage ? (
+                      <div className="p-2 bg-white rounded-xl shadow-xs border border-stone-200">
+                        <img
+                          src={customQrImage}
+                          alt="Custom UPI Standee QR"
+                          className="w-36 h-36 object-contain rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-2 bg-white rounded-xl shadow-xs border border-stone-200">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=4&data=${encodeURIComponent(
+                            `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${finalPayable.toFixed(2)}&cu=INR`
+                          )}`}
+                          alt="Scan to Pay via UPI"
+                          className="w-36 h-36 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] font-black text-stone-900">
+                      ₹{finalPayable.toFixed(2)} • {payeeName}
+                    </div>
+                    <div className="text-[10px] text-stone-600 font-mono">
+                      UPI ID: <span className="text-emerald-700 font-bold">{upiId}</span>
+                    </div>
+                    <p className="text-[9px] text-stone-600 font-medium">Customer scans with GPay, PhonePe, Paytm, or BHIM</p>
+                  </div>
+                </div>
+              )}
 
               {/* Fast Checkout Trigger */}
               <button
                 type="button"
                 disabled={cart.length === 0}
                 onClick={() => setIsPaymentModalOpen(true)}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-emerald-500 hover:from-brand-600 hover:to-emerald-600 text-white font-black text-sm shadow-xl shadow-brand-500/25 flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-40"
+                className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                  cart.length === 0
+                    ? 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed shadow-none'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/25 active:scale-98 cursor-pointer'
+                }`}
               >
                 <span>⚡ Collect ₹{finalPayable.toFixed(0)}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -911,84 +1080,84 @@ export const AdminStallPOSPage: React.FC = () => {
                 {/* 4 Executive KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Revenue */}
-                  <div className="p-5 rounded-3xl bg-gradient-to-br from-purple-900 to-slate-900 text-white shadow-xl space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">
+                  <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-600 to-brand-700 text-white shadow-xl space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-100">
                       Total Exhibition Revenue
                     </span>
-                    <div className="text-2xl font-black font-mono text-emerald-300">
+                    <div className="text-2xl font-black font-mono text-white">
                       ₹{summaryData.financial.totalRevenue.toLocaleString('en-IN')}
                     </div>
-                    <p className="text-[11px] text-purple-200">
+                    <p className="text-[11px] text-amber-100 font-medium">
                       {summaryData.financial.ordersCount} total orders processed
                     </p>
                   </div>
 
                   {/* UPI Collections */}
-                  <div className="p-5 rounded-3xl bg-art-900 border border-art-800 shadow-sm space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                  <div className="p-5 rounded-3xl bg-white border border-stone-200 shadow-sm space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800">
                       UPI GPay / PhonePe ({summaryData.financial.upiShare}%)
                     </span>
-                    <div className="text-2xl font-black font-mono text-cyan-300">
+                    <div className="text-2xl font-black font-mono text-sky-950">
                       ₹{summaryData.financial.totalUpi.toLocaleString('en-IN')}
                     </div>
-                    <p className="text-[11px] text-art-500">Direct studio bank transfer</p>
+                    <p className="text-[11px] text-stone-500 font-medium">Direct studio bank transfer</p>
                   </div>
 
                   {/* Cash in Drawer */}
-                  <div className="p-5 rounded-3xl bg-art-900 border border-art-800 shadow-sm space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                  <div className="p-5 rounded-3xl bg-white border border-stone-200 shadow-sm space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
                       Cash in Drawer ({summaryData.financial.cashShare}%)
                     </span>
-                    <div className="text-2xl font-black font-mono text-amber-300">
+                    <div className="text-2xl font-black font-mono text-amber-950">
                       ₹{summaryData.financial.totalCash.toLocaleString('en-IN')}
                     </div>
-                    <p className="text-[11px] text-art-500">Physical paper currency tally</p>
+                    <p className="text-[11px] text-stone-500 font-medium">Physical paper currency tally</p>
                   </div>
 
                   {/* Net Profit */}
-                  <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/30 shadow-sm space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">
                       Net Gross Profit ({summaryData.financial.profitMargin}%)
                     </span>
-                    <div className="text-2xl font-black font-mono text-emerald-400">
+                    <div className="text-2xl font-black font-mono text-white">
                       ₹{summaryData.financial.totalProfit.toLocaleString('en-IN')}
                     </div>
-                    <p className="text-[11px] text-emerald-300 font-semibold">After deducting BOM manufacturing cost</p>
+                    <p className="text-[11px] text-emerald-100 font-semibold">After deducting BOM manufacturing cost</p>
                   </div>
                 </div>
 
                 {/* Top Selling Products & Leads Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   {/* Top Selling Table (7 cols) */}
-                  <div className="lg:col-span-7 rounded-3xl bg-art-900 border border-art-800 p-5 space-y-4">
-                    <h4 className="font-bold text-sm text-art-200 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-amber-400" />
+                  <div className="lg:col-span-7 rounded-3xl bg-white border border-stone-200 p-5 space-y-4 shadow-sm">
+                    <h4 className="font-black text-sm text-stone-900 flex items-center gap-2">
+                      <Award className="w-4 h-4 text-amber-600" />
                       <span>Top Selling Items at Exhibition</span>
                     </h4>
 
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-art-800 text-art-500 uppercase text-[10px]">
+                          <tr className="border-b border-stone-200 text-stone-500 uppercase text-[10px]">
                             <th className="pb-2">Product Name</th>
                             <th className="pb-2 text-center">Units Sold</th>
                             <th className="pb-2 text-right">Revenue</th>
                             <th className="pb-2 text-right">Profit</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-art-800/60 font-medium">
+                        <tbody className="divide-y divide-stone-100 font-medium">
                           {summaryData.topProducts.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-art-950/40">
-                              <td className="py-2.5 font-bold text-art-200 truncate max-w-xs">
+                            <tr key={idx} className="hover:bg-stone-50 transition-colors">
+                              <td className="py-2.5 font-bold text-stone-900 truncate max-w-xs">
                                 {item.title}
                               </td>
-                              <td className="py-2.5 text-center font-mono font-bold text-white">
+                              <td className="py-2.5 text-center font-mono font-bold text-stone-800">
                                 {item.quantity} pcs
                               </td>
-                              <td className="py-2.5 text-right font-mono font-bold text-emerald-400">
+                              <td className="py-2.5 text-right font-mono font-bold text-emerald-700">
                                 ₹{item.revenue}
                               </td>
-                              <td className="py-2.5 text-right font-mono text-art-400">
+                              <td className="py-2.5 text-right font-mono font-bold text-brand-700">
                                 ₹{item.profit}
                               </td>
                             </tr>
@@ -999,29 +1168,29 @@ export const AdminStallPOSPage: React.FC = () => {
                   </div>
 
                   {/* Customer Leads Directory (5 cols) */}
-                  <div className="lg:col-span-5 rounded-3xl bg-art-900 border border-art-800 p-5 space-y-4">
+                  <div className="lg:col-span-5 rounded-3xl bg-white border border-stone-200 p-5 space-y-4 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm text-art-200 flex items-center gap-2">
-                        <User className="w-4 h-4 text-brand-400" />
+                      <h4 className="font-black text-sm text-stone-900 flex items-center gap-2">
+                        <User className="w-4 h-4 text-brand-600" />
                         <span>Walk-in Customer Leads ({summaryData.leadsCount})</span>
                       </h4>
                     </div>
 
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                       {summaryData.leads.length === 0 ? (
-                        <p className="text-xs text-art-500 py-6 text-center">
+                        <p className="text-xs text-stone-500 py-6 text-center">
                           No phone numbers collected for this session yet.
                         </p>
                       ) : (
                         summaryData.leads.map((lead, idx) => (
                           <div
                             key={idx}
-                            className="p-3 rounded-2xl bg-art-950 border border-art-800 flex items-center justify-between text-xs"
+                            className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between text-xs"
                           >
                             <div>
-                              <strong className="text-art-200 block font-bold">{lead.customerName}</strong>
-                              <span className="font-mono text-art-500 text-[11px]">{lead.customerPhone}</span>
-                              <span className="text-[10px] text-emerald-400 block font-mono">
+                              <strong className="text-stone-900 block font-bold">{lead.customerName}</strong>
+                              <span className="font-mono text-stone-500 text-[11px]">{lead.customerPhone}</span>
+                              <span className="text-[10px] text-emerald-700 block font-mono font-bold">
                                 Spent: ₹{lead.totalSpent}
                               </span>
                             </div>
@@ -1030,7 +1199,7 @@ export const AdminStallPOSPage: React.FC = () => {
                               href={`https://api.whatsapp.com/send?phone=${lead.customerPhone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(`Hi ${lead.customerName}! 🌸 Thank you for visiting Rasin Arts stall! Enjoy 15% OFF your next order with coupon FLEA15.`)}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1 transition-colors"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-xs"
                             >
                               <Send className="w-3 h-3" />
                               <span>WhatsApp</span>
@@ -1050,35 +1219,35 @@ export const AdminStallPOSPage: React.FC = () => {
         {/* VIEW 3: EXHIBITION HISTORY */}
         {/* ======================================================== */}
         {activeTab === 'history' && (
-          <div className="rounded-3xl bg-art-900 border border-art-800 p-5 space-y-4">
-            <h4 className="font-bold text-base text-art-200">Past Exhibition & Stall Records</h4>
+          <div className="rounded-3xl bg-white border border-stone-200 p-5 space-y-4 shadow-sm">
+            <h4 className="font-black text-base text-stone-900">Past Exhibition &amp; Stall Records</h4>
             <div className="space-y-3">
               {pastSessions.map((s) => (
                 <div
                   key={s._id}
-                  className="p-4 rounded-2xl bg-art-950 border border-art-800 flex items-center justify-between gap-4 text-xs"
+                  className="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-4 text-xs hover:border-brand-500 transition-colors"
                 >
                   <div>
-                    <h5 className="font-black text-sm text-art-200">{s.name}</h5>
-                    <p className="text-art-500 text-[11px]">
+                    <h5 className="font-black text-sm text-stone-900">{s.name}</h5>
+                    <p className="text-stone-500 text-[11px]">
                       {s.location} • {new Date(s.startedAt).toLocaleDateString('en-IN')}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <span className="text-[10px] uppercase text-art-500 block">Total Revenue</span>
-                      <strong className="font-mono font-black text-emerald-400 text-sm">
+                      <span className="text-[10px] uppercase text-stone-500 block font-semibold">Total Revenue</span>
+                      <strong className="font-mono font-black text-emerald-700 text-sm">
                         ₹{s.totalRevenue.toLocaleString('en-IN')}
                       </strong>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] uppercase text-art-500 block">Profit</span>
-                      <strong className="font-mono font-bold text-white text-xs">
+                      <span className="text-[10px] uppercase text-stone-500 block font-semibold">Profit</span>
+                      <strong className="font-mono font-black text-stone-900 text-xs">
                         ₹{s.totalProfit.toLocaleString('en-IN')}
                       </strong>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-200 text-stone-800">
                       {s.status}
                     </span>
                   </div>
@@ -1094,26 +1263,26 @@ export const AdminStallPOSPage: React.FC = () => {
       {/* ======================================================== */}
       <AnimatePresence>
         {isPaymentModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-art-900 border border-art-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              className="bg-white border border-stone-200 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
             >
-              <div className="p-5 border-b border-art-800 flex items-center justify-between bg-art-950">
+              <div className="p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-brand-500 text-white">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-black text-sm text-art-200">Collect Payment</h4>
-                    <p className="text-[11px] text-art-500">Scan UPI or accept physical cash</p>
+                    <h4 className="font-black text-sm text-stone-900">Collect Payment</h4>
+                    <p className="text-[11px] text-stone-500">Scan UPI or accept physical cash</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsPaymentModalOpen(false)}
-                  className="p-1.5 text-art-400 hover:text-white rounded-xl"
+                  className="p-1.5 text-stone-400 hover:text-stone-700 rounded-xl"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1121,11 +1290,11 @@ export const AdminStallPOSPage: React.FC = () => {
 
               <div className="p-5 space-y-4">
                 {/* Payment Method Switcher */}
-                <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-art-950 border border-art-800 text-xs font-bold">
+                <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-stone-100 border border-stone-200 text-xs font-bold">
                   <button
                     onClick={() => setPaymentMethod('UPI')}
                     className={`py-2 rounded-xl transition-all ${
-                      paymentMethod === 'UPI' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400'
+                      paymentMethod === 'UPI' ? 'bg-brand-500 text-white shadow-md' : 'text-stone-600 hover:text-stone-900'
                     }`}
                   >
                     UPI QR
@@ -1133,7 +1302,7 @@ export const AdminStallPOSPage: React.FC = () => {
                   <button
                     onClick={() => setPaymentMethod('Cash')}
                     className={`py-2 rounded-xl transition-all ${
-                      paymentMethod === 'Cash' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400'
+                      paymentMethod === 'Cash' ? 'bg-brand-500 text-white shadow-md' : 'text-stone-600 hover:text-stone-900'
                     }`}
                   >
                     Cash
@@ -1141,7 +1310,7 @@ export const AdminStallPOSPage: React.FC = () => {
                   <button
                     onClick={() => setPaymentMethod('Card')}
                     className={`py-2 rounded-xl transition-all ${
-                      paymentMethod === 'Card' ? 'bg-brand-500 text-white shadow-md' : 'text-art-400'
+                      paymentMethod === 'Card' ? 'bg-brand-500 text-white shadow-md' : 'text-stone-600 hover:text-stone-900'
                     }`}
                   >
                     Card POS
@@ -1149,48 +1318,86 @@ export const AdminStallPOSPage: React.FC = () => {
                 </div>
 
                 {/* Amount Banner */}
-                <div className="p-4 rounded-2xl bg-art-950 border border-art-800 text-center space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-art-500">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
                     Exact Amount to Collect
                   </span>
-                  <div className="text-3xl font-black font-mono text-emerald-400">
+                  <div className="text-3xl font-black font-mono text-emerald-800">
                     ₹{finalPayable.toFixed(2)}
                   </div>
                 </div>
 
                 {/* Method 1: Dynamic UPI QR Code */}
                 {paymentMethod === 'UPI' && (
-                  <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-art-950 border border-art-800 space-y-3 text-center">
-                    {renderUPIQRCode(
-                      `upi://pay?pa=rasinarts@okhdfcbank&pn=RasinArtsStudio&am=${finalPayable}&cu=INR`,
-                      170
+                  <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3 text-center">
+                    {customQrImage ? (
+                      <div className="space-y-1">
+                        <div className="p-2 bg-white rounded-xl shadow-xs border border-stone-200 inline-block">
+                          <img
+                            src={customQrImage}
+                            alt="Custom UPI Standee QR"
+                            className="w-44 h-44 object-contain rounded-lg"
+                          />
+                        </div>
+                        <p className="text-[12px] font-black text-stone-800">{payeeName}</p>
+                      </div>
+                    ) : (
+                      <div className="p-2 bg-white rounded-xl shadow-xs border border-stone-200">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=6&data=${encodeURIComponent(
+                            `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${finalPayable.toFixed(2)}&cu=INR`
+                          )}`}
+                          alt="Dynamic UPI QR"
+                          className="w-44 h-44 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
                     )}
-                    <span className="text-[11px] font-bold text-art-400 flex items-center gap-1.5">
-                      <Smartphone className="w-3.5 h-3.5 text-brand-400" />
-                      Scan with Google Pay, PhonePe, or Paytm
-                    </span>
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-stone-700 flex items-center justify-center gap-1.5">
+                        <Smartphone className="w-3.5 h-3.5 text-brand-600" />
+                        Scan with Google Pay, PhonePe, Paytm, or BHIM
+                      </span>
+                      <p className="text-[10px] text-stone-600 font-mono">
+                        UPI: <span className="text-emerald-700 font-bold">{upiId}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempUpiId(upiId);
+                        setTempPayeeName(payeeName);
+                        setTempCustomQrImage(customQrImage);
+                        setIsQrSettingsModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer"
+                    >
+                      ⚙️ Change UPI ID / Custom Standee QR
+                    </button>
                   </div>
                 )}
 
                 {/* Method 2: Physical Cash Calculator */}
                 {paymentMethod === 'Cash' && (
-                  <div className="space-y-3 p-4 rounded-2xl bg-art-950 border border-art-800 text-xs">
+                  <div className="space-y-3 p-4 rounded-2xl bg-stone-50 border border-stone-200 text-xs">
                     <div>
-                      <label className="font-bold text-art-400 block mb-1">Cash Tendered by Customer (₹)</label>
+                      <label className="font-bold text-stone-700 block mb-1">Cash Tendered by Customer (₹)</label>
                       <input
                         type="number"
                         min="0"
                         value={cashTendered}
                         onChange={(e) => setCashTendered(e.target.value)}
                         placeholder={`e.g. ${Math.ceil(finalPayable / 500) * 500 || 500}`}
-                        className="w-full bg-art-900 border border-art-700 rounded-xl p-2.5 font-mono text-lg font-black text-white focus:outline-none focus:border-brand-500"
+                        className="w-full bg-white border border-stone-300 rounded-xl p-2.5 font-mono text-lg font-black text-stone-900 focus:outline-none focus:border-brand-500"
                         autoFocus
                       />
                     </div>
                     {cashNum > 0 && (
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-art-900 border border-art-700">
-                        <span className="font-bold text-art-400">Return Change:</span>
-                        <strong className="text-base font-black font-mono text-amber-400">
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                        <span className="font-bold text-amber-900">Return Change:</span>
+                        <strong className="text-base font-black font-mono text-amber-900">
                           ₹{changeDue.toFixed(2)}
                         </strong>
                       </div>
@@ -1203,7 +1410,7 @@ export const AdminStallPOSPage: React.FC = () => {
                   type="button"
                   disabled={isProcessingPayment}
                   onClick={handleProcessOrder}
-                  className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-white font-black text-sm shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-black text-sm shadow-xl shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <CheckCircle2 className="w-5 h-5" />
                   <span>
@@ -1221,22 +1428,22 @@ export const AdminStallPOSPage: React.FC = () => {
       {/* ======================================================== */}
       <AnimatePresence>
         {completedOrderData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-art-900 border border-emerald-500/40 rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4"
+              className="bg-white border border-emerald-200 rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4"
             >
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div>
-                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500 text-white font-mono text-xs font-black">
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-600 text-white font-mono text-xs font-black">
                   #{completedOrderData.orderNumber}
                 </span>
-                <h3 className="text-lg font-black text-white mt-1.5">Sale Completed!</h3>
-                <p className="text-xs text-art-400">
+                <h3 className="text-lg font-black text-stone-900 mt-1.5">Sale Completed!</h3>
+                <p className="text-xs text-stone-500">
                   Collected ₹{completedOrderData.totalAmount.toFixed(0)} • Stock decremented live
                 </p>
               </div>
@@ -1253,7 +1460,7 @@ export const AdminStallPOSPage: React.FC = () => {
                   className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md"
                 >
                   <Send className="w-4 h-4" />
-                  <span>Send Bill & Promo on WhatsApp</span>
+                  <span>Send Bill &amp; Promo on WhatsApp</span>
                 </button>
               )}
 
@@ -1262,7 +1469,7 @@ export const AdminStallPOSPage: React.FC = () => {
                   setCompletedOrderData(null);
                   setIsPaymentModalOpen(false);
                 }}
-                className="w-full py-2.5 rounded-2xl bg-art-800 hover:bg-art-700 text-art-200 font-bold text-xs transition-all"
+                className="w-full py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs transition-all"
               >
                 Done (Next Customer)
               </button>
@@ -1276,38 +1483,81 @@ export const AdminStallPOSPage: React.FC = () => {
       {/* ======================================================== */}
       {isStartSessionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-art-900 border border-art-800 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-art-800 pb-3">
-              <h4 className="font-black text-sm text-art-200">Start New Exhibition / Stall Session</h4>
+          <div className="bg-white border border-stone-200 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <h4 className="font-black text-sm text-stone-900">Start New Exhibition / Stall Session</h4>
               <button
                 onClick={() => setIsStartSessionModalOpen(false)}
-                className="text-art-400 hover:text-white"
+                className="text-stone-400 hover:text-stone-700"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleStartSession} className="space-y-4 text-xs">
+              {/* Quick Auto-Fill Event Presets */}
+              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                    Auto-Fill Quick Presets
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-semibold">1-tap setup</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewSessionName('Diwali Crafts & Lifestyle Gala');
+                      setNewSessionLocation('Stall #14, MMRDA Pavilion');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    Diwali Gala
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewSessionName('Weekend Artisan Flea Market');
+                      setNewSessionLocation('Booth B-08, Open Lawn');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    Weekend Flea
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewSessionName('Bandra Pop-up Exhibition');
+                      setNewSessionLocation('Stall 22, Ground Floor');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    Pop-Up Stall
+                  </button>
+                </div>
+              </div>
+
               <div>
-                <label className="font-bold text-art-400 block mb-1">Exhibition / Event Name *</label>
+                <label className="font-bold text-stone-700 block mb-1">Exhibition / Event Name *</label>
                 <input
                   type="text"
                   value={newSessionName}
                   onChange={(e) => setNewSessionName(e.target.value)}
                   placeholder="e.g. Bandra Flea Market, Diwali Crafts Gala"
-                  className="w-full bg-art-950 border border-art-700 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-brand-500"
+                  className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-stone-900 font-bold focus:outline-none focus:border-brand-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="font-bold text-art-400 block mb-1">Stall Location / Booth Number</label>
+                <label className="font-bold text-stone-700 block mb-1">Stall Location / Booth Number</label>
                 <input
                   type="text"
                   value={newSessionLocation}
                   onChange={(e) => setNewSessionLocation(e.target.value)}
                   placeholder="e.g. Stall #14, MMRDA Grounds"
-                  className="w-full bg-art-950 border border-art-700 rounded-xl p-2.5 text-art-300 focus:outline-none focus:border-brand-500"
+                  className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-stone-900 focus:outline-none focus:border-brand-500"
                 />
               </div>
 
@@ -1315,7 +1565,7 @@ export const AdminStallPOSPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsStartSessionModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-art-800 text-art-400 font-bold"
+                  className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 font-bold hover:bg-stone-50"
                 >
                   Cancel
                 </button>
@@ -1324,6 +1574,218 @@ export const AdminStallPOSPage: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold shadow-md"
                 >
                   Start Stall Session
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: STALL PAYMENT QR & UPI ID CONFIGURATION */}
+      {/* ======================================================== */}
+      {isQrSettingsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-stone-900">Configure Stall Payment QR & UPI</h3>
+                  <p className="text-[11px] text-stone-500">Walk-in customers scan this QR to pay at your counter</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQrSettingsModalOpen(false)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQrSettings} className="space-y-4 text-xs">
+              {/* Quick UPI Presets Banner */}
+              <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                    Quick UPI ID Presets
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-semibold">1-tap fill</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempUpiId('rasinarts@okhdfcbank');
+                      setTempPayeeName('Rasin Arts Studio');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    HDFC Bank
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempUpiId('9876543210@paytm');
+                      setTempPayeeName('Rasin Arts Studio');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    Paytm Merchant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempUpiId('rasin.studio@icici');
+                      setTempPayeeName('Rasin Arts Studio');
+                    }}
+                    className="p-2 rounded-xl bg-white border border-amber-200 text-[10px] font-bold text-stone-800 hover:border-brand-500 hover:text-brand-700 transition-all text-center truncate shadow-2xs"
+                  >
+                    ICICI / GPay
+                  </button>
+                </div>
+              </div>
+
+              {/* UPI ID Field */}
+              <div>
+                <label className="font-bold text-stone-700 block mb-1">
+                  Your UPI ID / VPA <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={tempUpiId}
+                    onChange={(e) => setTempUpiId(e.target.value)}
+                    placeholder="e.g. rasinarts@okhdfcbank or 9876543210@paytm"
+                    className="w-full bg-white border border-stone-300 rounded-xl p-2.5 font-mono text-sm text-stone-900 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Payments received via QR will credit directly to the bank account linked with this UPI ID.
+                </p>
+              </div>
+
+              {/* Payee / Merchant Name */}
+              <div>
+                <label className="font-bold text-stone-700 block mb-1">Business / Payee Display Name</label>
+                <input
+                  type="text"
+                  value={tempPayeeName}
+                  onChange={(e) => setTempPayeeName(e.target.value)}
+                  placeholder="e.g. Rasin Arts Studio"
+                  className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-stone-900 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              {/* Custom Physical QR Standee Image (Optional) */}
+              <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-stone-800 block">
+                    Custom QR Standee Image <span className="text-stone-400 font-normal">(Optional)</span>
+                  </label>
+                  {tempCustomQrImage && (
+                    <button
+                      type="button"
+                      onClick={() => setTempCustomQrImage('')}
+                      className="text-[10px] font-bold text-rose-600 hover:text-rose-700 underline"
+                    >
+                      Use Dynamic QR Instead
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-stone-500">
+                  If you already have an official printed UPI standee (from PhonePe, Paytm, BharatPe, or GPay), upload or paste its image here.
+                </p>
+
+                {/* Upload or URL */}
+                <div className="flex items-center gap-2">
+                  <label className="px-3 py-2 rounded-xl bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-xs cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                    <Upload className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Upload QR Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQrImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <span className="text-stone-400 text-xs">or paste URL:</span>
+                  <input
+                    type="url"
+                    value={tempCustomQrImage}
+                    onChange={(e) => setTempCustomQrImage(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 bg-white border border-stone-300 rounded-xl p-2 text-stone-900 text-xs focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
+                {/* Live Preview of QR */}
+                <div className="pt-2 border-t border-stone-200 flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-xl border border-stone-300 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+                    {tempCustomQrImage ? (
+                      <img
+                        src={tempCustomQrImage}
+                        alt="Preview QR"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    ) : (
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=2&data=${encodeURIComponent(
+                          `upi://pay?pa=${tempUpiId || 'rasinarts@okhdfcbank'}&pn=${encodeURIComponent(
+                            tempPayeeName || 'Rasin Arts Studio'
+                          )}&cu=INR`
+                        )}`}
+                        alt="Dynamic QR Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    )}
+                  </div>
+                  <div className="text-[11px] text-stone-600 space-y-1">
+                    <div className="font-bold text-stone-900">
+                      {tempCustomQrImage ? 'Custom Standee Image Active' : 'Dynamic Auto-Amount QR Active'}
+                    </div>
+                    <div className="text-[10px] text-stone-500 font-mono">
+                      Payee: {tempPayeeName || 'Rasin Arts Studio'}
+                    </div>
+                    <div className="text-[10px] text-emerald-700 font-mono font-bold">
+                      {tempUpiId || 'rasinarts@okhdfcbank'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Pad Display Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-stone-50">
+                <input
+                  type="checkbox"
+                  checked={showQrOnPad}
+                  onChange={(e) => setShowQrOnPad(e.target.checked)}
+                  className="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                />
+                <span className="text-xs font-semibold text-stone-700">
+                  Display Payment QR directly on the Current Stall Order Pad
+                </span>
+              </label>
+
+              {/* Modal Actions */}
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setIsQrSettingsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 font-bold hover:bg-stone-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md cursor-pointer transition-colors"
+                >
+                  Save & Apply QR
                 </button>
               </div>
             </form>
